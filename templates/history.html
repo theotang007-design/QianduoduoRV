@@ -1,24 +1,34 @@
 {% extends "base.html" %}
 {% block title %}历史报告 · {{ app_name }}{% endblock %}
 {% block content %}
-<div class="card">
-  <h1>历史复盘报告</h1>
-  <div class="muted">共 {{ dates|length }} 期报告，所有记录永久保留</div>
-</div>
-
-<div class="card">
-  <h2>按日期跳转</h2>
-  <form onsubmit="location.href='/report/'+this.d.value;return false;">
+<div class="card hero">
+  <div class="hero-top">
+    <span class="ai-avatar">🗂️</span>
+    <div class="hero-title">
+      <h1>我给你做过的所有复盘</h1>
+      <div class="muted">共 {{ dates|length }} 期，所有记录永久保留</div>
+    </div>
+  </div>
+  <form onsubmit="location.href='/report/'+this.d.value;return false;" class="jump-form">
     <input type="date" name="d" required>
-    <button class="btn" type="submit">查看</button>
+    <button class="btn" type="submit">跳到这一天</button>
   </form>
 </div>
 
 {% if dates %}
 <div class="card">
-  <h2>全部报告</h2>
-  <div class="date-list" style="margin-bottom:18px;">
+  <div class="sec-head">
+    <h2>最近 30 期</h2>
+    <span class="muted">点一下就能看那天的结论</span>
+  </div>
+  <div class="date-list">
     {% for d in dates[:30] %}<a href="/report/{{ d.date }}">{{ d.date }}</a>{% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-head">
+    <h2>全部记录</h2>
   </div>
   <table>
     <tr><th style="width:150px;">日期</th><th>生成时间</th><th style="width:110px;">操作</th></tr>
@@ -26,7 +36,7 @@
     <tr>
       <td class="mono">{{ d.date }}</td>
       <td class="muted mono">{{ d.generated_at }}</td>
-      <td><a href="/report/{{ d.date }}">查看报告</a></td>
+      <td><a href="/report/{{ d.date }}">查看 →</a></td>
     </tr>
     {% endfor %}
   </table>
@@ -34,13 +44,19 @@
 {% else %}
 <div class="card">
   <div class="empty">
-    <h1>暂无历史报告</h1>
-    <p class="muted">点击右上角「立即复盘」生成第一份报告</p>
+    <span class="ai-avatar" style="margin-bottom:14px;">✨</span>
+    <h1>我还没帮你复盘过</h1>
+    <p class="muted">点右上角「让 AI 复盘」，我马上给你出第一份报告</p>
   </div>
 </div>
 {% endif %}
 
 <style>
+  .hero { padding: 26px 28px; }
+  .hero-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+  .hero-title h1 { margin: 0 0 3px; }
+  .jump-form { display: flex; gap: 10px; align-items: center; }
   .mono { font-family: "Consolas", "SF Mono", monospace; }
+  .empty .ai-avatar { display: inline-flex; }
 </style>
 {% endblock %}

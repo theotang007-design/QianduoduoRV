@@ -13,9 +13,17 @@
   {% endif %}
 {% endfor %}
 
-<div class="card">
-  <h1>持仓管理{% if current_account %} · {{ current_account.name }}{% endif %}</h1>
-  <div class="muted">买卖后直接修改「数量」「成本价」，点该行「更新」即时生效</div>
+<div class="card hero">
+  <div class="hero-top">
+    <span class="ai-avatar">📁</span>
+    <div class="hero-title">
+      <h1>你的持仓{% if current_account %} · {{ current_account.name }}{% endif %}</h1>
+      <div class="muted">这些标的就是我每天帮你复盘的范围</div>
+    </div>
+  </div>
+  <p class="ai-note" style="margin:0;">
+    <span>买卖后直接改这一行的「数量」「成本价」，点「更新」我就会用新数据继续跟踪。</span>
+  </p>
   {% if ns.has %}
   <div class="stat-grid">
     <div class="stat">
@@ -47,7 +55,7 @@
 
 <div class="card">
   <div class="card-head">
-    <h2 style="margin:0; border:0; padding:0;">当前持仓（{{ holdings|length }} 只 · 按市值降序）</h2>
+    <h2 style="margin:0;">当前持仓 · {{ holdings|length }} 只<span class="muted" style="font-weight:400;margin-left:8px;">按市值降序</span></h2>
     <div class="head-actions">
       <span class="muted" id="refreshHint"></span>
       <button class="btn" type="button" id="refreshBtn" onclick="refreshQuotes(this)">
@@ -108,7 +116,7 @@
     </tr>
     {% endfor %}
     {% if not holdings %}
-    <tr><td colspan="9" class="muted">暂无持仓，请在下方添加</td></tr>
+    <tr><td colspan="9" class="muted">还没有持仓，在下面加一只，我就能开始帮你跟踪</td></tr>
     {% endif %}
   </table>
 
@@ -125,14 +133,17 @@
   </form>
   {% endfor %}
   {% if holdings %}
-  <div class="muted" style="margin-top:11px;">
-    浮动盈亏按最近一个交易日收盘价估算，仅供参考；实际盈亏请以券商账户为准。
-  </div>
+  <p class="ai-note" style="margin-top:12px;">
+    <span>浮动盈亏是我按最近一个交易日收盘价估的，仅供参考；实际盈亏请以券商账户为准。</span>
+  </p>
   {% endif %}
 </div>
 
 <div class="card">
-  <h2>新增持仓</h2>
+  <div class="sec-head">
+    <h2>加一只新的进来</h2>
+    <span class="muted">填完代码就行，名称我会自动补</span>
+  </div>
   <form method="post">
     <input type="hidden" name="action" value="save">
     <table>
@@ -146,57 +157,52 @@
       </tr>
     </table>
   </form>
-  <div class="muted" style="margin-top:9px;">
-    添加后会立即拉取该股行情（名称以交易所数据为准），消息与AI分析在后台进行，稍后刷新即可看到。<br>
-    代码已存在时会覆盖该条记录的数量与成本价。
-  </div>
+  <p class="ai-note" style="margin-top:12px;">
+    <span>
+      添加后我会立刻去拉这只股的行情（名称以交易所数据为准），消息和 AI 解读在后台跑，稍后刷新就能看到。
+      代码已存在时，会覆盖那条记录的数量与成本价。
+    </span>
+  </p>
 </div>
 
 <style>
+  .hero { padding: 26px 28px; }
+  .hero-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+  .hero-title h1 { margin: 0 0 3px; }
   .stat-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px; margin-top: 16px;
+    gap: 12px; margin-top: 18px;
   }
   .stat {
-    padding: 13px 16px; border-radius: 10px;
-    background: linear-gradient(150deg, rgba(59,130,246,.12), rgba(17,25,44,.5));
-    border: 1px solid rgba(88,128,200,.2);
+    padding: 14px 16px; border-radius: 9px;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft);
   }
-  .stat-label { font-size: 11.5px; color: #8397b5; letter-spacing: .5px; }
+  .stat-label { font-size: 11.5px; color: var(--txt-dim); }
   .stat-value {
-    margin-top: 3px; font-size: 23px; font-weight: 700; line-height: 1.2;
-    font-family: "Consolas", "SF Mono", monospace;
+    margin-top: 2px; font-size: 24px; font-weight: 650; line-height: 1.2;
+    color: var(--txt-strong);
+    font-family: "Inter", "Consolas", "SF Mono", monospace;
   }
   .mono { font-family: "Consolas", "SF Mono", monospace; }
   /* 仓位占比：数值 + 可视化条 */
-  .weight-wrap { display: flex; flex-direction: column; gap: 4px; }
-  .weight-num { font-size: 12.5px; color: #b9cde8; }
+  .weight-wrap { display: flex; flex-direction: column; gap: 5px; }
+  .weight-num { font-size: 12.5px; color: var(--txt-soft); }
   .weight-bar {
-    display: block; height: 4px; border-radius: 3px;
-    background: rgba(88,128,200,.18); overflow: hidden;
+    display: block; height: 5px; border-radius: 999px;
+    background: var(--tint); overflow: hidden;
   }
   .weight-bar > i {
-    display: block; height: 100%; border-radius: 3px;
-    background: linear-gradient(90deg, var(--cyan), var(--blue));
-    box-shadow: 0 0 8px rgba(34,211,238,.55);
-    animation: barGrow .9s cubic-bezier(.2,.8,.3,1) both;
+    display: block; height: 100%; border-radius: 999px;
+    background: var(--grad);
   }
-  @keyframes barGrow { from { transform: scaleX(0); transform-origin: left; } to { transform: none; } }
   /* 卡片标题行：标题 + 右侧操作 */
   .card-head {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; flex-wrap: wrap;
-    margin-bottom: 15px; padding-bottom: 11px;
-    border-bottom: 1px solid var(--border);
-  }
-  .card-head h2::before {
-    content: ""; width: 3px; height: 14px; border-radius: 2px; margin-right: 9px;
-    background: linear-gradient(180deg, var(--cyan), var(--blue));
-    box-shadow: 0 0 8px rgba(34,211,238,.8);
+    gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
   }
   .head-actions { display: flex; align-items: center; gap: 12px; }
-  #refreshBtn.running { cursor: progress; animation: runPulse 1.3s ease-in-out infinite; }
-  #refreshBtn.running::after { display: none; }
+  #refreshBtn.running { cursor: progress; opacity: .65; transform: none; }
 </style>
 {% endblock %}
 

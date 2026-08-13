@@ -1,29 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
-    <linearGradient id="coin" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#67e8f9"/>
-      <stop offset="55%" stop-color="#60a5fa"/>
-      <stop offset="100%" stop-color="#c084fc"/>
-    </linearGradient>
-    <linearGradient id="trend" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#22d3ee"/>
-      <stop offset="100%" stop-color="#5df0bd"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b5bd6"/>
+      <stop offset="55%" stop-color="#6f4fe0"/>
+      <stop offset="100%" stop-color="#8b3fd8"/>
     </linearGradient>
   </defs>
-
-  <!-- 铜钱外圈：象征"钱" -->
-  <circle cx="32" cy="32" r="26" fill="none" stroke="url(#coin)" stroke-width="4"/>
-
-  <!-- 铜钱方孔（下移留出走势线空间） -->
-  <rect x="26" y="36" width="12" height="12" rx="2"
-        fill="none" stroke="url(#coin)" stroke-width="3" opacity=".9"/>
-
-  <!-- 上升走势线：象征"多多" -->
-  <path d="M15 34 L24 25 L31 30 L44 16"
-        fill="none" stroke="url(#trend)" stroke-width="4.4"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- 走势线末端箭头 -->
-  <path d="M36.5 15.5 L45 15 L44.5 23.5"
-        fill="none" stroke="url(#trend)" stroke-width="4"
-        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 蓝紫渐变圆角底：与 Copilot 风格主色一致 -->
+  <rect x="0" y="0" width="64" height="64" rx="17" fill="url(#bg)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="4"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- 铜钱外圈：象征"钱" -->
+    <circle cx="32" cy="33" r="19"/>
+    <!-- 铜钱方孔 -->
+    <rect x="27" y="37" width="10" height="10" rx="2" stroke-width="3"/>
+    <!-- 上升走势线：象征"多多" -->
+    <path d="M21 34 L27 28 L32 32 L41 22"/>
+    <path d="M34.5 21.5 L42 21.5 L42 28"/>
+  </g>
 </svg>

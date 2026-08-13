@@ -12,12 +12,40 @@
   {% endif %}
   {% set ns.news = ns.news + s.news['利好']|length + s.news['利空']|length + s.news['中性']|length %}
 {% endfor %}
+{% set confirm_alerts = report.alerts | selectattr('level', 'equalto', 'confirm') | list %}
 
-<div class="card">
-  <h1>每日复盘报告 · {{ report.date }}</h1>
-  <div class="muted">
-    {% if report.account_name %}账户：{{ report.account_name }} · {% endif %}生成时间 {{ generated_at }}
+{# ===== AI 助手开场：用自然语言把当日结论先说清楚 ===== #}
+<div class="card hero">
+  <div class="hero-top">
+    <span class="ai-avatar">✨</span>
+    <div class="hero-title">
+      <h1>我已完成 {{ report.date }} 的复盘</h1>
+      <div class="muted">
+        {% if report.account_name %}账户「{{ report.account_name }}」 · {% endif %}{{ generated_at }} 生成
+      </div>
+    </div>
   </div>
+
+  <div class="ai-bubble hero-bubble">
+    <div class="ai-bubble-body">
+      <div class="ai-bubble-title">今日结论</div>
+      <div class="ai-bubble-text">
+        我扫了一遍你的 <b>{{ report.stocks|length }}</b> 只持仓，
+        {% if ns.up or ns.down %}
+        其中 <b>{{ ns.up }}</b> 只收涨、<b>{{ ns.down }}</b> 只收跌{% if ns.flat %}、{{ ns.flat }} 只走平{% endif %}，
+        {% endif %}
+        并读了 <b>{{ ns.news }}</b> 条与它们相关的消息。
+        {% if confirm_alerts %}
+        其中 <b>{{ confirm_alerts|length }}</b> 只已出现确认级别的转折信号，建议你今天优先看它们。
+        {% elif report.alerts %}
+        有 <b>{{ report.alerts|length }}</b> 只走到了需要留意的位置，暂未出现确认信号。
+        {% else %}
+        暂时没有标的触发顶部或底部条件，可以按原节奏观察。
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <div class="stat-grid">
     <div class="stat">
       <div class="stat-label">持仓数</div>
@@ -40,44 +68,63 @@
 
 {% if not report.ai_ready %}
 <div class="card notice-warn">
-  <h2 style="border-bottom-color:rgba(251,146,60,.3);">AI分析未启用</h2>
-  <p class="muted" style="margin:0 0 8px;">
-    当前<b style="color:#ffb866;">未配置 AI API Key</b>，消息已抓取但未做相关性与情绪判断，
-    因此消息面统一显示为"无重大消息"——这并不代表当日真的没有消息。
-    {% if report.pending_news %}
-    <br>本期共有 <b style="color:#ffb866;">{{ report.pending_news }}</b> 条已抓取消息等待分析。
-    {% endif %}
-  </p>
-  <p class="muted" style="margin:0;">
-    前往 <a href="/settings" style="color:#7cc4f0;">「设置」</a> 页面填入 API Key
-    即可启用，保存后点击「⚡ 立即复盘」补齐分析。
-  </p>
+  <div class="ai-note">
+    <div>
+      <b style="color:var(--txt-strong);">我还没拿到 AI 分析能力。</b>
+      当前<b style="color:var(--warn);">未配置 API Key</b>，消息已经帮你抓下来了，但还没法判断相关性和情绪，
+      所以消息面统一显示为"无重大消息"——这并不代表当日真的没有消息。
+      {% if report.pending_news %}
+      目前有 <b style="color:var(--warn);">{{ report.pending_news }}</b> 条消息在排队等我分析。
+      {% endif %}
+      去 <a href="/settings">设置</a> 填一个 Key，再点右上角「让 AI 复盘」，我就能把这部分补齐。
+    </div>
+  </div>
 </div>
 {% elif report.pending_news %}
 <div class="card notice-warn">
-  <h2 style="border-bottom-color:rgba(251,146,60,.3);">部分消息待分析</h2>
-  <p class="muted" style="margin:0;">
-    有 <b style="color:#ffb866;">{{ report.pending_news }}</b> 条消息尚未完成AI分析
-    （可能因超出每日分析上限或调用失败）。再次点击「⚡ 立即复盘」会自动续跑。
-  </p>
+  <div class="ai-note">
+    <div>
+      还有 <b style="color:var(--warn);">{{ report.pending_news }}</b> 条消息我没分析完（可能超出了每日上限或调用失败）。
+      再点一次「让 AI 复盘」我会自动接着跑。
+    </div>
+  </div>
 </div>
 {% endif %}
 
 {% if report.alerts %}
+{# ===== 重点关注：AI 主动挑出来的标的 ===== #}
 <div class="card sig-alert-card">
-  <h2 style="border-bottom-color:rgba(168,85,247,.3);">波段信号提醒</h2>
-  <p class="muted" style="margin:0 0 12px;">
-    以下标的触发了顶部或底部的观察条件。仅为指标状态提示，不构成买卖建议。
+  <div class="sec-head">
+    <h2>✨ 今天值得你先看这几只</h2>
+    <span class="muted">{{ report.alerts|length }} 只触发了顶部或底部条件</span>
+  </div>
+  <p class="ai-note" style="margin:0 0 14px;">
+    <span>这些是我按 MA20 / BIAS20 / RSI14 / 30分钟MACD 的组合条件筛出来的位置提示，只描述指标状态，不构成买卖建议。</span>
   </p>
-  <div class="alert-list">
+  <div class="alert-grid">
     {% for a in report.alerts %}
-    <a href="/stock/{{ a.code }}" class="alert-item lv-{{ a.level }}">
-      <span class="alert-badge {{ 'top' if a.type == 'top' else 'bot' }}">
-        {{ '顶' if a.type == 'top' else '底' }}
-      </span>
-      <span class="alert-name">{{ a.name }}</span>
-      <span class="alert-code mono">{{ a.code }}</span>
-      <span class="alert-text">{{ a.text }}</span>
+    {% set st = report.stocks | selectattr('code', 'equalto', a.code) | first %}
+    {% set pct = (st.tech or {}).get('pct_change') if st else None %}
+    <a href="/stock/{{ a.code }}" class="alert-card lv-{{ a.level }}">
+      <div class="alert-card-top">
+        <span class="alert-badge {{ 'top' if a.type == 'top' else 'bot' }}">
+          {{ '顶' if a.type == 'top' else '底' }}
+        </span>
+        <span class="alert-lv lv-{{ a.level }}">
+          {% if a.level == 'confirm' %}确认{% elif a.level == 'warn' %}警戒{% else %}观察{% endif %}
+        </span>
+      </div>
+      <div class="alert-name">{{ a.name }}</div>
+      <div class="alert-code mono">{{ a.code }}</div>
+      <div class="alert-text">{{ a.text }}</div>
+      <div class="alert-card-foot">
+        {% if pct is not none %}
+        <span class="alert-pct {{ 'up' if pct > 0 else ('down' if pct < 0 else 'flat') }}">{{ '%+.2f'|format(pct) }}%</span>
+        {% else %}
+        <span class="alert-pct flat">—</span>
+        {% endif %}
+        <span class="alert-go">查看 →</span>
+      </div>
     </a>
     {% endfor %}
   </div>
@@ -85,7 +132,10 @@
 {% endif %}
 
 <div class="card">
-  <h2>持仓总览（按量能分组）</h2>
+  <div class="sec-head">
+    <h2>持仓概览</h2>
+    <span class="muted">按当日量能状态分组，帮你先看资金活跃的那一组</span>
+  </div>
 
   {% set groups = [('放量', 'g-up'), ('缩量', 'g-down'), ('量能平稳', 'g-flat'), ('无数据', 'g-none')] %}
   {% for gname, gcls in groups %}
@@ -155,7 +205,10 @@
 </div>
 
 <div class="card">
-  <h2>逐股详情</h2>
+  <div class="sec-head">
+    <h2>逐只说给你听</h2>
+    <span class="muted">每只标的的技术面、位置状态与相关消息</span>
+  </div>
   {% for s in report.stocks %}
   <div class="stock-block">
     <h3><a href="/stock/{{ s.code }}">{{ s.name }}<span class="code-chip">{{ s.code }}</span></a></h3>
@@ -167,7 +220,7 @@
     {% endif %}
     {% if s.tech_plain %}
     <div class="tech-plain">
-      <span class="tech-plain-tag">大白话</span>{{ s.tech_plain }}
+      <span class="tech-plain-tag">✨ 说人话</span>{{ s.tech_plain }}
     </div>
     {% endif %}
     {% set sig = s.signal %}
@@ -197,17 +250,17 @@
       </div>
     </div>
     <div class="sig-more">
-      完整警戒条件、确认条件与假信号场景见
-      <a href="/stock/{{ s.code }}">个股详情</a>
+      想看完整的警戒条件、确认条件和假信号场景？
+      <a href="/stock/{{ s.code }}">展开个股详情 →</a>
     </div>
     {% endif %}
     {% if not s.has_news %}
       {% if s.pending_news %}
         <div class="no-news">
-          有 {{ s.pending_news }} 条消息待AI分析，暂未纳入报告
+          有 {{ s.pending_news }} 条消息待我分析，暂未纳入本次结论
         </div>
       {% else %}
-        <div class="no-news">今日无重大消息</div>
+        <div class="no-news">今天没读到值得说的消息</div>
       {% endif %}
     {% else %}
       {% for sent in ['利好', '利空', '中性'] %}
@@ -220,7 +273,7 @@
             {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
             {% else %}{{ n.title }}{% endif %}
           </div>
-          {% if n.reason %}<div class="news-reason">AI解读：{{ n.reason }}</div>{% endif %}
+          {% if n.reason %}<div class="news-reason"><b>我的解读：</b>{{ n.reason }}</div>{% endif %}
           <div class="news-meta">{{ n.source }} · {{ n.publish_time }} · 相关性 {{ n.relevance }}</div>
         </div>
         {% endfor %}
@@ -232,7 +285,10 @@
 
 {% if dates %}
 <div class="card">
-  <h2>快速切换日期</h2>
+  <div class="sec-head">
+    <h2>回看以前的复盘</h2>
+    <span class="muted">点任意日期即可查看那天我给你的结论</span>
+  </div>
   <div class="date-list">
     {% for d in dates[:20] %}<a href="/report/{{ d.date }}">{{ d.date }}</a>{% endfor %}
   </div>
@@ -240,152 +296,183 @@
 {% endif %}
 
 <style>
-  .notice-warn {
-    border-color: rgba(251,146,60,.32) !important;
-    background: linear-gradient(150deg, rgba(251,146,60,.1), rgba(17,25,44,.62)) !important;
-  }
-  .notice-warn::before {
-    background: linear-gradient(90deg, transparent, rgba(251,146,60,.8), transparent) !important;
-  }
+  /* ===== AI 开场卡 ===== */
+  .hero { padding: 26px 28px; }
+  .hero-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .hero-title h1 { margin: 0 0 3px; }
+  .hero-bubble { margin-bottom: 18px; }
+  .notice-warn { border-color: var(--border-mid) !important; }
+  .notice-warn a { color: var(--link); font-weight: 500; }
+
   .stat-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 12px; margin-top: 16px;
+    gap: 12px;
   }
   .stat {
-    padding: 13px 16px; border-radius: 10px;
-    background: linear-gradient(150deg, rgba(59,130,246,.12), rgba(17,25,44,.5));
-    border: 1px solid rgba(88,128,200,.2);
+    padding: 14px 16px; border-radius: 9px;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft);
   }
-  .stat-label { font-size: 11.5px; color: #8397b5; letter-spacing: .5px; }
+  .stat-label { font-size: 11.5px; color: var(--txt-dim); }
   .stat-value {
-    margin-top: 3px; font-size: 25px; font-weight: 700; line-height: 1.2;
-    font-family: "Consolas", "SF Mono", monospace;
+    margin-top: 2px; font-size: 26px; font-weight: 650; line-height: 1.2;
+    color: var(--txt-strong);
+    font-family: "Inter", "Consolas", "SF Mono", monospace;
   }
-  .stat-value.cyan { color: var(--cyan); text-shadow: 0 0 16px rgba(34,211,238,.5); }
+  .stat-value.cyan { color: var(--accent-ink); }
   .mono { font-family: "Consolas", "SF Mono", monospace; }
+
   /* 量能分组 */
-  .vol-group { margin-bottom: 22px; }
+  .vol-group { margin-bottom: 24px; }
   .vol-group:last-child { margin-bottom: 0; }
   .vol-head {
     display: flex; align-items: center; gap: 10px;
     flex-wrap: wrap; margin-bottom: 8px;
   }
   .vol-tag {
-    padding: 3px 11px; border-radius: 6px;
-    font-size: 12.5px; font-weight: 700; letter-spacing: .5px;
+    padding: 3px 12px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--txt-soft); background: var(--tint);
+    border: 1px solid var(--border-soft);
   }
-  .g-up { background: rgba(255,77,94,.16); color: #ff8d99; border: 1px solid rgba(255,77,94,.35); }
-  .g-down { background: rgba(0,229,155,.14); color: #5df0bd; border: 1px solid rgba(0,229,155,.32); }
-  .g-flat { background: rgba(96,165,250,.15); color: #a8cdf5; border: 1px solid rgba(96,165,250,.32); }
-  .g-none { background: rgba(148,163,184,.14); color: #a9bbd4; border: 1px solid rgba(148,163,184,.3); }
+  .g-up { color: var(--up); background: var(--up-tint); }
+  .g-down { color: var(--down); background: var(--down-tint); }
+  .g-flat { color: var(--accent-ink); background: var(--accent-tint); }
+  .g-none { color: var(--txt-dim); }
   .vol-desc { font-size: 12px; }
+
   /* 均线偏离幅度 */
-  .dev { margin-left: 5px; font-size: 11.5px; opacity: .92; }
-  /* 偏离达10%以上：加框强调，便于快速识别偏离过大的持仓 */
+  .dev { margin-left: 5px; font-size: 11.5px; }
+  /* 偏离达10%以上：加浅底强调，便于快速识别偏离过大的持仓 */
   .dev-far {
-    padding: 1px 5px; border-radius: 4px; font-weight: 700; opacity: 1;
-    border: 1px solid currentColor;
+    padding: 1px 6px; border-radius: 999px; font-weight: 600;
+    background: var(--tint);
   }
   /* 总览表：列宽收紧，均线数值与偏离标记同行不换行 */
   .ov-table { table-layout: fixed; }
   .ov-table .nowrap { white-space: nowrap; }
   .ov-table th:last-child, .ov-table td:last-child { width: auto; }
+
   /* 技术面解读 */
   .tech-read {
-    margin: -4px 0 11px; padding: 9px 14px;
-    font-size: 12.5px; color: #c3d6ee; line-height: 1.7;
-    background: linear-gradient(90deg, rgba(168,85,247,.09), rgba(168,85,247,.01));
-    border-left: 2px solid var(--purple); border-radius: 0 7px 7px 0;
+    margin: 0 0 10px; padding: 11px 14px;
+    font-size: 12.5px; color: var(--txt-soft); line-height: 1.75;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft); border-radius: 8px;
   }
   .tech-read-tag {
-    display: inline-block; margin-right: 8px; padding: 1px 8px;
-    border-radius: 4px; font-size: 11px; font-weight: 700;
-    color: #d5aeff; background: rgba(168,85,247,.18);
-    border: 1px solid rgba(168,85,247,.34);
+    display: inline-block; margin-right: 8px; padding: 1px 9px;
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    color: var(--txt-dim); background: var(--tint);
   }
   /* 行业消息标签 */
-  .tag-scope {
-    background: rgba(251,146,60,.16); color: #ffc182;
-    border: 1px solid rgba(251,146,60,.36); font-weight: 600;
-  }
-  /* 大白话说明 */
+  .tag-scope { color: var(--warn); background: var(--warn-tint); }
+
+  /* 大白话说明：AI 语气重点块 */
   .tech-plain {
-    margin: -4px 0 12px; padding: 10px 14px;
-    font-size: 13px; color: #d3e4f7; line-height: 1.85;
-    background: linear-gradient(90deg, rgba(0,229,155,.08), rgba(0,229,155,.01));
-    border-left: 2px solid var(--down); border-radius: 0 7px 7px 0;
+    margin: 0 0 12px; padding: 12px 15px;
+    font-size: 13px; color: var(--txt-strong); line-height: 1.8;
+    background: linear-gradient(135deg, var(--accent-tint), var(--accent-tint-2));
+    border: 1px solid var(--border-soft); border-radius: 8px;
   }
   .tech-plain-tag {
-    display: inline-block; margin-right: 8px; padding: 1px 8px;
-    border-radius: 4px; font-size: 11px; font-weight: 700;
-    color: #5df0bd; background: rgba(0,229,155,.16);
-    border: 1px solid rgba(0,229,155,.34);
+    display: inline-block; margin-right: 8px; padding: 1px 9px;
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    color: #fff; background: var(--grad);
   }
-  /* ===== 波段信号提醒 ===== */
-  .alert-list { display: flex; flex-direction: column; gap: 7px; }
-  .alert-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 13px; border-radius: 8px; text-decoration: none;
-    background: rgba(88,128,200,.07);
-    border: 1px solid rgba(88,128,200,.16);
-    border-left-width: 3px;
-    transition: background .15s, transform .15s;
+
+  /* ===== 重点关注：卡片网格 ===== */
+  .alert-grid {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
   }
-  .alert-item:hover { background: rgba(88,128,200,.13); transform: translateX(2px); }
-  .alert-item.lv-confirm { border-left-color: #f97066; }
-  .alert-item.lv-warn { border-left-color: #fbbf24; }
-  .alert-item.lv-watch { border-left-color: #38bdf8; }
+  .alert-card {
+    position: relative; display: flex; flex-direction: column;
+    padding: 13px 15px 12px; border-radius: 10px; text-decoration: none;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft);
+    border-top: 3px solid var(--border-mid);
+    transition: background .18s, box-shadow .18s, transform .18s, border-color .18s;
+  }
+  .alert-card:hover {
+    background: var(--panel); box-shadow: var(--shadow-card);
+    transform: translateY(-2px);
+  }
+  .alert-card.lv-confirm { border-top-color: var(--alert); }
+  .alert-card.lv-warn { border-top-color: var(--amber); }
+  .alert-card.lv-watch { border-top-color: var(--sky); }
+  .alert-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 9px;
+  }
   .alert-badge {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 21px; height: 21px; flex-shrink: 0;
-    border-radius: 5px; font-size: 11.5px; font-weight: 700;
+    width: 24px; height: 24px; flex-shrink: 0;
+    border-radius: 7px; font-size: 12px; font-weight: 600;
   }
-  .alert-badge.top {
-    color: #ffb0a8; background: rgba(249,112,102,.16);
-    border: 1px solid rgba(249,112,102,.34);
+  .alert-badge.top { color: var(--alert); background: var(--up-tint); }
+  .alert-badge.bot { color: var(--sky); background: var(--sky-tint); }
+  .alert-lv {
+    padding: 2px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
   }
-  .alert-badge.bot {
-    color: #7dd3fc; background: rgba(56,189,248,.16);
-    border: 1px solid rgba(56,189,248,.34);
+  .alert-lv.lv-confirm { color: var(--alert); background: var(--up-tint); }
+  .alert-lv.lv-warn { color: var(--warn); background: var(--warn-tint); }
+  .alert-lv.lv-watch { color: var(--sky); background: var(--sky-tint); }
+  .alert-name { font-size: 15px; font-weight: 650; color: var(--txt-strong); line-height: 1.4; }
+  .alert-code { margin-top: 1px; font-size: 11.5px; color: var(--txt-faint); }
+  .alert-text {
+    margin-top: 8px; font-size: 12.5px; color: var(--txt-soft); line-height: 1.7;
   }
-  .alert-name { font-size: 13.5px; font-weight: 600; color: #dbe9fb; }
-  .alert-code { font-size: 11.5px; color: #7f9dc4; }
-  .alert-text { margin-left: auto; font-size: 12.5px; color: #b9cde8; }
+  .alert-card-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 11px; padding-top: 9px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .alert-pct { font-size: 13px; font-weight: 650; }
+  .alert-pct.flat { color: var(--txt-dim); font-weight: 500; }
+  .alert-go {
+    flex-shrink: 0; font-size: 12px; color: var(--accent-ink);
+    opacity: 0; transition: opacity .18s;
+  }
+  .alert-card:hover .alert-go { opacity: 1; }
+
   /* ===== 逐股信号双栏 ===== */
   .sig-row {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    margin: 0 0 8px;
+    margin: 0 0 9px;
   }
   @media (max-width: 780px) { .sig-row { grid-template-columns: 1fr; } }
   .sig-box {
-    padding: 9px 13px; border-radius: 8px;
-    background: rgba(88,128,200,.06);
-    border: 1px solid rgba(88,128,200,.15);
-    border-left-width: 2px; border-left-color: rgba(88,128,200,.3);
+    padding: 12px 14px; border-radius: 8px;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft);
   }
-  .sig-box.sig-confirm { border-left-color: #f97066; background: rgba(249,112,102,.06); }
-  .sig-box.sig-warn { border-left-color: #fbbf24; background: rgba(251,191,36,.05); }
-  .sig-box.sig-watch { border-left-color: #38bdf8; background: rgba(56,189,248,.05); }
-  .sig-box.sig-disabled { border-left-color: #6b7f9c; opacity: .78; }
+  .sig-box.sig-confirm { box-shadow: inset 3px 0 0 var(--alert); }
+  .sig-box.sig-warn { box-shadow: inset 3px 0 0 var(--amber); }
+  .sig-box.sig-watch { box-shadow: inset 3px 0 0 var(--sky); }
+  .sig-box.sig-disabled { opacity: .8; }
   .sig-head {
-    font-size: 12.5px; font-weight: 700; color: #d3e4f7; margin-bottom: 5px;
+    font-size: 12.5px; font-weight: 650; color: var(--txt-strong); margin-bottom: 5px;
   }
   .sig-hits {
     margin: 0; padding-left: 17px;
-    font-size: 12px; color: #b3c8e4; line-height: 1.75;
+    font-size: 12px; color: var(--txt-soft); line-height: 1.8;
   }
-  .sig-none { font-size: 12px; color: #7f9dc4; }
-  .sig-more { margin: 0 0 11px; font-size: 11.5px; color: #7f9dc4; }
-  .sig-more a { color: #7cc4f0; }
+  .sig-none { font-size: 12px; color: var(--txt-dim); }
+  .sig-more { margin: 0 0 12px; font-size: 12px; color: var(--txt-dim); }
+  .sig-more a { color: var(--link); text-decoration: none; font-weight: 500; }
+  .sig-more a:hover { text-decoration: underline; }
+
   .stock-block {
-    padding: 15px 0 5px; border-top: 1px solid rgba(88,128,200,.1);
+    padding: 18px 0 6px; border-top: 1px solid var(--border-soft);
   }
   .stock-block:first-of-type { border-top: 0; padding-top: 2px; }
   .code-chip {
-    margin-left: 9px; padding: 1px 8px; border-radius: 5px;
+    margin-left: 9px; padding: 1px 8px; border-radius: 999px;
     font-size: 11.5px; font-weight: 500; font-family: "Consolas", monospace;
-    color: #8fb4dd; background: rgba(88,128,200,.15);
-    border: 1px solid rgba(88,128,200,.25);
+    color: var(--txt-dim); background: var(--tint);
   }
+  .news-reason b { color: var(--accent-ink); font-weight: 600; }
 </style>
 {% endblock %}

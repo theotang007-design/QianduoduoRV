@@ -3,15 +3,26 @@
 {% block content %}
 <div class="card">
   <div class="empty">
-    <h1>暂无复盘报告{% if date %}（{{ date }}）{% endif %}</h1>
+    <span class="ai-avatar big">✨</span>
+    <h1>我还没有{% if date %} {{ date }} 的{% endif %}复盘可以给你看</h1>
     <p class="muted" style="margin-top:10px;">
-      请先在「持仓管理」添加持仓，然后点击右上角「⚡ 立即复盘」，<br>
-      或在命令行运行 <code>python run_review.py --force</code>
+      先去「持仓管理」把你的股票加进来，然后点右上角「✨ 让 AI 复盘」，<br>
+      我就会去读行情和消息，几分钟后给你一份完整结论。
     </p>
-    <p style="margin-top:24px;">
-      <a class="btn" href="/holdings"
-         style="text-decoration:none;padding:9px 22px;display:inline-block;">前往持仓管理</a>
+    <p style="margin-top:26px;">
+      <a class="btn btn-run" href="/holdings"
+         style="text-decoration:none;padding:10px 24px;display:inline-block;">先去添加持仓 →</a>
+    </p>
+    <p class="muted" style="margin-top:18px;font-size:12px;">
+      也可以在命令行运行 <code>python run_review.py --force</code>
     </p>
   </div>
 </div>
+
+<style>
+  .empty .ai-avatar.big {
+    display: inline-flex; width: 52px; height: 52px;
+    border-radius: 12px; font-size: 24px; margin-bottom: 18px;
+  }
+</style>
 {% endblock %}

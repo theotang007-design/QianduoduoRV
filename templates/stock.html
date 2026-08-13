@@ -1,19 +1,28 @@
 {% extends "base.html" %}
 {% block title %}{{ name }} · {{ app_name }}{% endblock %}
 {% block content %}
-<div class="card">
-  <h1>{{ name }}<span class="code-chip">{{ code }}</span>{% if industry %}<span class="ind-chip">{{ industry }}</span>{% endif %}</h1>
-  <div class="tech-line" style="margin-top:12px;">{{ tech_summary }}</div>
+<div class="card hero">
+  <div class="hero-top">
+    <span class="ai-avatar">📈</span>
+    <div class="hero-title">
+      <h1>{{ name }}<span class="code-chip">{{ code }}</span>{% if industry %}<span class="ind-chip">{{ industry }}</span>{% endif %}</h1>
+      <div class="muted">我把这只标的的位置、指标和消息都整理在下面了</div>
+    </div>
+  </div>
+  <div class="tech-line">{{ tech_summary }}</div>
   {% if tech_commentary %}
   <div class="tech-read"><span class="tech-read-tag">技术面解读</span>{{ tech_commentary }}</div>
   {% endif %}
   {% if tech_plain %}
-  <div class="tech-plain"><span class="tech-plain-tag">大白话</span>{{ tech_plain }}</div>
+  <div class="tech-plain"><span class="tech-plain-tag">✨ 说人话</span>{{ tech_plain }}</div>
   {% endif %}
 </div>
 
 <div class="card">
-  <h2>技术指标</h2>
+  <div class="sec-head">
+    <h2>技术指标</h2>
+    <span class="muted">按最近一个交易日收盘计算</span>
+  </div>
   <div class="ind-grid">
     <div class="ind"><span class="ind-k">MA5</span><span class="ind-v">{{ '%.2f'|format(tech.ma5) if tech.ma5 else '-' }}</span></div>
     <div class="ind"><span class="ind-k">MA10</span><span class="ind-v">{{ '%.2f'|format(tech.ma10) if tech.ma10 else '-' }}</span></div>
@@ -27,10 +36,15 @@
 
 {% if sig and not sig.error %}
 <div class="card">
-  <h2>① 当前指标状态</h2>
-  <p class="muted" style="margin:0 0 12px;">
-    基于 MA20、BIAS20、RSI14、30分钟MACD 的客观数值陈述。前提：本系统只做业绩优质标的的波段趋势分析，
-    不适用于连板妖股；以下内容不预测涨跌、不构成买卖建议。
+  <div class="sec-head">
+    <h2>它现在站在什么位置</h2>
+    <span class="muted">当前指标状态</span>
+  </div>
+  <p class="ai-note" style="margin:0 0 14px;">
+    <span>
+      下面是 MA20、BIAS20、RSI14、30分钟MACD 的客观数值。前提是我只对业绩优质标的做波段趋势分析，
+      不适用于连板妖股；这里不预测涨跌，也不给买卖建议。
+    </span>
   </p>
   <table class="sig-table">
     {% for it in sig.state_items %}
@@ -44,38 +58,44 @@
 </div>
 
 <div class="card">
-  <h2>② 阶段顶部 / 减仓警戒区</h2>
+  <div class="sec-head">
+    <h2>什么时候该警惕见顶</h2>
+    <span class="muted">阶段顶部 / 减仓警戒区</span>
+  </div>
   <div class="sig-verdict v-{{ sig.top.level }}">{{ sig.top.label }}</div>
 
   {% if sig.top.confirm_hits %}
   <div class="sig-sec">
-    <div class="sig-sec-h hit-confirm">已命中的见顶确认信号</div>
+    <div class="sig-sec-h hit-confirm">我已经看到的见顶确认信号</div>
     <ul class="sig-list strong">{% for h in sig.top.confirm_hits %}<li>{{ h }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
   {% if sig.top.warn_hits %}
   <div class="sig-sec">
-    <div class="sig-sec-h hit-warn">已命中的警戒信号</div>
+    <div class="sig-sec-h hit-warn">我已经看到的警戒信号</div>
     <ul class="sig-list strong">{% for h in sig.top.warn_hits %}<li>{{ h }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
 
   <div class="sig-sec">
-    <div class="sig-sec-h">进入减仓警戒的条件</div>
+    <div class="sig-sec-h">满足这些就算进入减仓警戒</div>
     <ul class="sig-list">{% for r in sig.top.warn_rules %}<li>{{ r }}</li>{% endfor %}</ul>
   </div>
   <div class="sig-sec">
-    <div class="sig-sec-h">趋势见顶确认的条件</div>
+    <div class="sig-sec-h">满足这些才算趋势见顶确认</div>
     <ul class="sig-list">{% for r in sig.top.confirm_rules %}<li>{{ r }}</li>{% endfor %}</ul>
   </div>
   <div class="sig-sec">
-    <div class="sig-sec-h muted-h">会出现假顶信号的情形</div>
+    <div class="sig-sec-h muted-h">这些情况容易是假顶，别急着下结论</div>
     <ul class="sig-list dim">{% for r in sig.top.fake_rules %}<li>{{ r }}</li>{% endfor %}</ul>
   </div>
 </div>
 
 <div class="card">
-  <h2>③ 波段底部 / 低吸观察区</h2>
+  <div class="sec-head">
+    <h2>什么位置值得低吸观察</h2>
+    <span class="muted">波段底部 / 低吸观察区</span>
+  </div>
   <div class="sig-verdict v-{{ sig.bottom.level }}">{{ sig.bottom.label }}</div>
 
   {% if sig.bottom.zone %}
@@ -99,37 +119,37 @@
     </div>
     {% endif %}
   </div>
-  <div class="muted" style="font-size:11.5px;margin:-2px 0 12px;">
-    区间为指标推导的观察范围，不是最低点预测；止损阈值取近20日低点下方3%。
-  </div>
+  <p class="ai-note" style="margin:-2px 0 14px;">
+    <span>这个区间是我按指标推出来的观察范围，不是最低点预测；止损阈值取的是近20日低点下方 3%。</span>
+  </p>
   {% endif %}
 
   {% if sig.bottom.confirm_hits %}
   <div class="sig-sec">
-    <div class="sig-sec-h hit-confirm">已命中的止跌确认信号</div>
+    <div class="sig-sec-h hit-confirm">我已经看到的止跌确认信号</div>
     <ul class="sig-list strong">{% for h in sig.bottom.confirm_hits %}<li>{{ h }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
   {% if sig.bottom.watch_hits %}
   <div class="sig-sec">
-    <div class="sig-sec-h hit-watch">已命中的观察信号</div>
+    <div class="sig-sec-h hit-watch">我已经看到的观察信号</div>
     <ul class="sig-list strong">{% for h in sig.bottom.watch_hits %}<li>{{ h }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
 
   <div class="sig-sec">
-    <div class="sig-sec-h">进入低吸观察的条件</div>
+    <div class="sig-sec-h">满足这些才进入低吸观察</div>
     <ul class="sig-list">{% for r in sig.bottom.watch_rules %}<li>{{ r }}</li>{% endfor %}</ul>
   </div>
   {% if sig.bottom.confirm_rules %}
   <div class="sig-sec">
-    <div class="sig-sec-h">止跌确认所需的共振信号</div>
+    <div class="sig-sec-h">止跌确认需要这些信号共振</div>
     <ul class="sig-list">{% for r in sig.bottom.confirm_rules %}<li>{{ r }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
   {% if sig.bottom.fake_rules %}
   <div class="sig-sec">
-    <div class="sig-sec-h muted-h">属于下跌中继假底的情形</div>
+    <div class="sig-sec-h muted-h">这些情况其实是下跌中继的假底</div>
     <ul class="sig-list dim">{% for r in sig.bottom.fake_rules %}<li>{{ r }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
@@ -137,19 +157,24 @@
 {% elif sig and sig.error %}
 <div class="card">
   <h2>波段趋势分析</h2>
-  <div class="no-news">{{ sig.error }}，请先在持仓页点击「⟳ 刷新最新价」补齐行情</div>
+  <div class="no-news">{{ sig.error }}，先去持仓页点一下「⟳ 刷新最新价」把行情补齐，我就能算了</div>
 </div>
 {% endif %}
 
 <div class="card">
-  <h2>K线走势（近60个交易日）</h2>
+  <div class="sec-head">
+    <h2>K线走势</h2>
+    <span class="muted">近60个交易日，可滚轮缩放</span>
+  </div>
   <div id="kchart" style="width:100%;height:440px;"></div>
 </div>
 
 <div class="card">
-  <h2>近30天相关消息</h2>
+  <div class="sec-head">
+    <h2>近30天我读到的消息</h2>
+  </div>
   {% if not news %}
-    <div class="no-news">近30天无相关消息记录</div>
+    <div class="no-news">近30天没有读到相关消息</div>
   {% endif %}
   {% for n in news %}
   <div class="news-item">
@@ -161,130 +186,121 @@
       {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
       {% else %}{{ n.title }}{% endif %}
     </div>
-    {% if n.reason %}<div class="news-reason">AI解读：{{ n.reason }}</div>{% endif %}
+    {% if n.reason %}<div class="news-reason"><b>我的解读：</b>{{ n.reason }}</div>{% endif %}
     <div class="news-meta">{{ n.source }} · {{ n.publish_time }} · 相关性 {{ n.relevance or '-' }}</div>
   </div>
   {% endfor %}
 </div>
 
 <style>
+  .hero { padding: 26px 28px; }
+  .hero-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+  .hero-title h1 { margin: 0 0 3px; }
   .code-chip {
-    margin-left: 10px; padding: 2px 9px; border-radius: 6px;
+    margin-left: 10px; padding: 1px 9px; border-radius: 999px;
     font-size: 12.5px; font-weight: 500; font-family: "Consolas", monospace;
-    color: #8fb4dd; background: rgba(88,128,200,.15);
-    border: 1px solid rgba(88,128,200,.25); vertical-align: middle;
+    color: var(--txt-dim); background: var(--tint); vertical-align: middle;
   }
   .ind-chip {
-    margin-left: 8px; padding: 2px 9px; border-radius: 6px;
+    margin-left: 8px; padding: 1px 9px; border-radius: 999px;
     font-size: 12px; font-weight: 500; vertical-align: middle;
-    color: #ffc182; background: rgba(251,146,60,.14);
-    border: 1px solid rgba(251,146,60,.32);
+    color: var(--accent-ink); background: var(--accent-tint);
   }
   .tech-read {
-    margin: 10px 0 0; padding: 9px 14px;
-    font-size: 12.5px; color: #c3d6ee; line-height: 1.7;
-    background: linear-gradient(90deg, rgba(168,85,247,.09), rgba(168,85,247,.01));
-    border-left: 2px solid var(--purple); border-radius: 0 7px 7px 0;
+    margin: 10px 0 0; padding: 11px 14px;
+    font-size: 12.5px; color: var(--txt-soft); line-height: 1.75;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft); border-radius: 8px;
   }
   .tech-read-tag {
-    display: inline-block; margin-right: 8px; padding: 1px 8px;
-    border-radius: 4px; font-size: 11px; font-weight: 700;
-    color: #d5aeff; background: rgba(168,85,247,.18);
-    border: 1px solid rgba(168,85,247,.34);
+    display: inline-block; margin-right: 8px; padding: 1px 9px;
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    color: var(--txt-dim); background: var(--tint);
   }
   .tech-plain {
-    margin: 8px 0 0; padding: 10px 14px;
-    font-size: 13px; color: #d3e4f7; line-height: 1.85;
-    background: linear-gradient(90deg, rgba(0,229,155,.08), rgba(0,229,155,.01));
-    border-left: 2px solid var(--down); border-radius: 0 7px 7px 0;
+    margin: 10px 0 0; padding: 12px 15px;
+    font-size: 13px; color: var(--txt-strong); line-height: 1.8;
+    background: linear-gradient(135deg, var(--accent-tint), var(--accent-tint-2));
+    border: 1px solid var(--border-soft); border-radius: 8px;
   }
   .tech-plain-tag {
-    display: inline-block; margin-right: 8px; padding: 1px 8px;
-    border-radius: 4px; font-size: 11px; font-weight: 700;
-    color: #5df0bd; background: rgba(0,229,155,.16);
-    border: 1px solid rgba(0,229,155,.34);
+    display: inline-block; margin-right: 8px; padding: 1px 9px;
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    color: #fff; background: var(--grad);
   }
-  .tag-scope {
-    background: rgba(251,146,60,.16); color: #ffc182;
-    border: 1px solid rgba(251,146,60,.36); font-weight: 600;
-  }
+  .tag-scope { color: var(--warn); background: var(--warn-tint); }
+  .news-reason b { color: var(--accent-ink); font-weight: 600; }
+
   /* ===== 波段信号 ===== */
   .mono { font-family: "Consolas", "SF Mono", monospace; }
   .sig-table { width: 100%; border-collapse: collapse; }
   .sig-table td {
-    padding: 8px 10px; font-size: 12.5px;
-    border-bottom: 1px solid rgba(88,128,200,.1); vertical-align: top;
+    padding: 10px 12px; font-size: 12.5px;
+    border-bottom: 1px solid var(--border-soft); vertical-align: top;
   }
   .sig-table tr:last-child td { border-bottom: 0; }
-  .sig-table .sk { width: 118px; color: #8397b5; }
+  .sig-table .sk { width: 118px; color: var(--txt-dim); }
   .sig-table .sv {
-    width: 150px; font-weight: 700; color: #d6e8fb; white-space: nowrap;
+    width: 150px; font-weight: 650; color: var(--txt-strong); white-space: nowrap;
   }
-  .sig-table .sn { color: #b3c8e4; }
+  .sig-table .sn { color: var(--txt-soft); }
   .sig-verdict {
-    display: inline-block; margin: 0 0 14px; padding: 6px 14px;
-    border-radius: 7px; font-size: 13.5px; font-weight: 700;
-    color: #b9cde8; background: rgba(88,128,200,.1);
-    border: 1px solid rgba(88,128,200,.22);
+    display: inline-block; margin: 0 0 16px; padding: 6px 15px;
+    border-radius: 999px; font-size: 13.5px; font-weight: 600;
+    color: var(--txt-soft); background: var(--tint);
   }
-  .sig-verdict.v-confirm {
-    color: #ffb0a8; background: rgba(249,112,102,.12);
-    border-color: rgba(249,112,102,.36);
+  .sig-verdict.v-confirm { color: var(--alert); background: var(--up-tint); }
+  .sig-verdict.v-warn { color: var(--amber); background: var(--warn-tint); }
+  .sig-verdict.v-watch { color: var(--sky); background: var(--sky-tint); }
+  .sig-verdict.v-disabled { color: var(--txt-dim); }
+  .sig-sec {
+    margin-bottom: 10px; padding: 12px 15px; border-radius: 8px;
+    background: var(--tint-soft); border: 1px solid var(--border-soft);
   }
-  .sig-verdict.v-warn {
-    color: #ffd479; background: rgba(251,191,36,.12);
-    border-color: rgba(251,191,36,.36);
-  }
-  .sig-verdict.v-watch {
-    color: #7dd3fc; background: rgba(56,189,248,.12);
-    border-color: rgba(56,189,248,.36);
-  }
-  .sig-verdict.v-disabled { opacity: .8; }
-  .sig-sec { margin-bottom: 13px; }
   .sig-sec:last-child { margin-bottom: 0; }
   .sig-sec-h {
-    margin-bottom: 5px; font-size: 12px; font-weight: 700;
-    color: #a9c0de; letter-spacing: .3px;
+    margin-bottom: 6px; font-size: 12.5px; font-weight: 650;
+    color: var(--txt-strong);
   }
-  .sig-sec-h.hit-confirm { color: #ffb0a8; }
-  .sig-sec-h.hit-warn { color: #ffd479; }
-  .sig-sec-h.hit-watch { color: #7dd3fc; }
-  .sig-sec-h.muted-h { color: #7f9dc4; }
+  .sig-sec-h.hit-confirm { color: var(--alert); }
+  .sig-sec-h.hit-warn { color: var(--amber); }
+  .sig-sec-h.hit-watch { color: var(--sky); }
+  .sig-sec-h.muted-h { color: var(--txt-dim); }
   .sig-list {
     margin: 0; padding-left: 19px;
-    font-size: 12.5px; color: #b3c8e4; line-height: 1.85;
+    font-size: 12.5px; color: var(--txt-soft); line-height: 1.85;
   }
-  .sig-list.strong { color: #d6e8fb; }
-  .sig-list.dim { color: #8fa6c4; }
+  .sig-list.strong { color: var(--txt-strong); }
+  .sig-list.dim { color: var(--txt-dim); }
   .zone-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
-    gap: 10px; margin-bottom: 14px;
+    gap: 12px; margin-bottom: 14px;
   }
   .zone {
     display: flex; flex-direction: column; gap: 3px;
-    padding: 10px 13px; border-radius: 9px;
-    background: linear-gradient(150deg, rgba(56,189,248,.09), rgba(17,25,44,.45));
-    border: 1px solid rgba(88,128,200,.18);
+    padding: 13px 15px; border-radius: 9px;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft);
   }
-  .zone-k { font-size: 11px; color: #8397b5; letter-spacing: .4px; }
+  .zone-k { font-size: 11px; color: var(--txt-dim); }
   .zone-v {
-    font-size: 15px; font-weight: 700; color: #d6e8fb;
+    font-size: 16px; font-weight: 650; color: var(--txt-strong);
     font-family: "Consolas", "SF Mono", monospace;
   }
-  .zone-v.warn-v { color: #ffb0a8; }
+  .zone-v.warn-v { color: var(--alert); }
   .ind-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 12px;
   }
   .ind {
     display: flex; flex-direction: column; gap: 3px;
-    padding: 11px 14px; border-radius: 9px;
-    background: linear-gradient(150deg, rgba(59,130,246,.1), rgba(17,25,44,.45));
-    border: 1px solid rgba(88,128,200,.18);
+    padding: 13px 15px; border-radius: 9px;
+    background: var(--tint-soft);
+    border: 1px solid var(--border-soft);
   }
-  .ind-k { font-size: 11px; color: #8397b5; letter-spacing: .6px; }
+  .ind-k { font-size: 11px; color: var(--txt-dim); }
   .ind-v {
-    font-size: 17px; font-weight: 700; color: #d6e8fb;
-    font-family: "Consolas", "SF Mono", monospace;
+    font-size: 18px; font-weight: 650; color: var(--txt-strong);
+    font-family: "Inter", "Consolas", "SF Mono", monospace;
   }
 </style>
 {% endblock %}
@@ -292,28 +308,52 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <script>
-fetch('/api/kline/{{ code }}').then(r => r.json()).then(d => {
+// ECharts 在 canvas 上绘制，无法解析 CSS 变量，需运行时取出真实色值
+function cssVar(name, fallback) {
+  var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return (v || '').trim() || fallback;
+}
+
+var _klineData = null;
+var _chart = null;
+
+// 暴露给 base.html 的主题切换调用，实现配色跟随主题重绘
+window.renderChart = function () {
+  if (!_klineData) return;
   var el = document.getElementById('kchart');
-  if (!d.dates || !d.dates.length) {
-    el.innerHTML = '<div class="empty">暂无行情数据，请先运行一次复盘</div>';
-    return;
-  }
-  var chart = echarts.init(el);
-  var axis = { axisLine: { lineStyle: { color: 'rgba(88,128,200,.35)' } },
-               axisLabel: { color: '#7c8cab', fontSize: 11 } };
-  chart.setOption({
+  if (!el) return;
+  var d = _klineData;
+  var light = document.documentElement.getAttribute('data-theme') === 'light';
+
+  var cTxt = cssVar('--txt', '#384054');
+  var cDim = cssVar('--txt-dim', '#5f687d');
+  var cFaint = cssVar('--txt-faint', '#69718a');
+  var cGrid = cssVar('--chart-grid', '#e7ebf3');
+  var cUp = cssVar('--up', '#d92d3c');
+  var cDown = cssVar('--down', '#0f7d51');
+
+  if (_chart) _chart.dispose();
+  _chart = echarts.init(el);
+
+  var axis = {
+    axisLine: { lineStyle: { color: cGrid } },
+    axisLabel: { color: cDim, fontSize: 11 }
+  };
+
+  _chart.setOption({
     backgroundColor: 'transparent',
     animationDuration: 700,
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'cross' },
-      backgroundColor: 'rgba(9,14,26,.94)',
-      borderColor: 'rgba(56,189,248,.35)',
-      textStyle: { color: '#dbe6f5', fontSize: 12 }
+      backgroundColor: light ? 'rgba(255,255,255,.97)' : 'rgba(23,27,46,.96)',
+      borderColor: cssVar('--border-mid', '#dfe4ee'),
+      textStyle: { color: cTxt, fontSize: 12 },
+      extraCssText: 'border-radius:10px;box-shadow:0 8px 24px -8px rgba(19,26,43,.25);'
     },
     legend: {
       data: ['K线', 'MA5', 'MA10', 'MA20'], top: 0,
-      textStyle: { color: '#8397b5', fontSize: 12 },
-      inactiveColor: '#4a5a76'
+      textStyle: { color: cDim, fontSize: 12 },
+      inactiveColor: cFaint
     },
     grid: [
       { left: 58, right: 22, top: 34, height: 244 },
@@ -326,9 +366,9 @@ fetch('/api/kline/{{ code }}').then(r => r.json()).then(d => {
     ],
     yAxis: [
       Object.assign({}, axis, { scale: true, gridIndex: 0,
-        splitLine: { lineStyle: { color: 'rgba(88,128,200,.1)' } } }),
+        splitLine: { lineStyle: { color: cGrid } } }),
       Object.assign({}, axis, { gridIndex: 1, splitNumber: 2,
-        splitLine: { lineStyle: { color: 'rgba(88,128,200,.08)' } } })
+        splitLine: { lineStyle: { color: cGrid } } })
     ],
     dataZoom: [
       { type: 'inside', xAxisIndex: [0, 1], start: 40, end: 100 }
@@ -337,21 +377,34 @@ fetch('/api/kline/{{ code }}').then(r => r.json()).then(d => {
       {
         name: 'K线', type: 'candlestick', data: d.kline,
         itemStyle: {
-          color: '#ff4d5e', color0: '#00e59b',
-          borderColor: '#ff4d5e', borderColor0: '#00e59b'
+          color: cUp, color0: cDown,
+          borderColor: cUp, borderColor0: cDown
         }
       },
       { name: 'MA5', type: 'line', data: d.ma5, smooth: true, showSymbol: false,
-        lineStyle: { width: 1.4, color: '#22d3ee' } },
+        lineStyle: { width: 1.5, color: cssVar('--blue', '#3f57d8') } },
       { name: 'MA10', type: 'line', data: d.ma10, smooth: true, showSymbol: false,
-        lineStyle: { width: 1.4, color: '#facc15' } },
+        lineStyle: { width: 1.5, color: cssVar('--amber', '#a2650a') } },
       { name: 'MA20', type: 'line', data: d.ma20, smooth: true, showSymbol: false,
-        lineStyle: { width: 1.4, color: '#c084fc' } },
+        lineStyle: { width: 1.5, color: cssVar('--purple', '#7c3fd0') } },
       { name: '成交量', type: 'bar', data: d.volume, xAxisIndex: 1, yAxisIndex: 1,
-        itemStyle: { color: 'rgba(96,165,250,.55)' } }
+        itemStyle: { color: light ? 'rgba(91,91,214,.35)' : 'rgba(139,140,247,.45)',
+                     borderRadius: [3, 3, 0, 0] } }
     ]
   });
-  window.addEventListener('resize', function () { chart.resize(); });
+};
+
+fetch('/api/kline/{{ code }}').then(r => r.json()).then(d => {
+  var el = document.getElementById('kchart');
+  if (!d.dates || !d.dates.length) {
+    el.innerHTML = '<div class="empty">暂无行情数据，请先运行一次复盘</div>';
+    return;
+  }
+  _klineData = d;
+  window.renderChart();
+  window.addEventListener('resize', function () {
+    if (_chart) _chart.resize();
+  });
 });
 </script>
 {% endblock %}
