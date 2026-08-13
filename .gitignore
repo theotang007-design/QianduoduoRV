@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/*.db
+logs/*.log
+
+# 个人持仓明细（含数量与成本价），仅本地保留
+holdings.json

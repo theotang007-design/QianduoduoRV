@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}设置 · {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h1>AI 服务设置</h1>
+  <div class="muted">
+    配置大模型 API 用于新闻相关性与情绪分析。密钥仅保存在本机
+    <code>.env</code> 文件中，不会上传到任何服务器。
+  </div>
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="stat-label">AI 分析状态</div>
+      <div class="stat-value {{ 'ok' if ai_ready else 'warn' }}" style="font-size:19px;">
+        {{ '已启用' if ai_ready else '未启用' }}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">当前服务商</div>
+      <div class="stat-value" style="font-size:19px;">
+        {{ 'DeepSeek' if provider == 'deepseek' else '火山引擎' }}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">待分析消息</div>
+      <div class="stat-value cyan" style="font-size:19px;">{{ pending_news }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>密钥与模型</h2>
+  <form method="post" id="settingsForm">
+    <table class="form-table">
+      <tr>
+        <th style="width:130px;">使用的服务商</th>
+        <td>
+          <label class="radio">
+            <input type="radio" name="ai_provider" value="deepseek"
+                   {{ 'checked' if provider == 'deepseek' }}> DeepSeek
+          </label>
+          <label class="radio" style="margin-left:18px;">
+            <input type="radio" name="ai_provider" value="volcengine"
+                   {{ 'checked' if provider == 'volcengine' }}> 火山引擎
+          </label>
+        </td>
+      </tr>
+      <tr>
+        <th>DeepSeek Key</th>
+        <td>
+          <input type="password" name="deepseek_key" autocomplete="new-password"
+                 style="width:330px;"
+                 placeholder="{{ deepseek_masked or 'sk-… 尚未配置' }}">
+          {% if deepseek_masked %}
+            <span class="tag tag-bad" style="margin-left:8px;">已保存 {{ deepseek_masked }}</span>
+          {% endif %}
+          <div class="hint">
+            获取地址：<a href="https://platform.deepseek.com/api_keys" target="_blank"
+                        rel="noopener">platform.deepseek.com</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>DeepSeek 模型</th>
+        <td><input type="text" name="deepseek_model" value="{{ deepseek_model }}" style="width:230px;"></td>
+      </tr>
+      <tr>
+        <th>火山引擎 Key</th>
+        <td>
+          <input type="password" name="volc_key" autocomplete="new-password"
+                 style="width:330px;"
+                 placeholder="{{ volc_masked or '尚未配置' }}">
+          {% if volc_masked %}
+            <span class="tag tag-bad" style="margin-left:8px;">已保存 {{ volc_masked }}</span>
+          {% endif %}
+          <div class="hint">
+            获取地址：<a href="https://console.volcengine.com/ark" target="_blank"
+                        rel="noopener">console.volcengine.com/ark</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>火山引擎模型</th>
+        <td><input type="text" name="volc_model" value="{{ volc_model }}" style="width:230px;"></td>
+      </tr>
+      <tr>
+        <th>每股每日上限</th>
+        <td>
+          <input type="number" name="max_news" value="{{ max_news }}" min="1" max="30" style="width:90px;">
+          <div class="hint">每只股票每天最多分析多少条消息，用于控制 API 费用。建议 3～8。</div>
+        </td>
+      </tr>
+    </table>
+
+    <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
+      <button class="btn" type="submit">保存设置</button>
+      <button class="btn" type="button" onclick="testAI(this)">测试连接</button>
+      <span class="hint" style="margin:0;">留空表示不修改已保存的密钥</span>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>安全说明</h2>
+  <ul class="muted" style="margin:0; padding-left:20px; line-height:1.9;">
+    <li>密钥写入项目根目录 <code>.env</code>，该文件已在 <code>.gitignore</code> 中，不会被提交到代码仓库。</li>
+    <li>页面只显示掩码（如 <code>sk-abc…f012</code>），不会回显完整密钥。</li>
+    <li>Web 服务默认仅监听 <code>127.0.0.1</code>，同一局域网内的其他设备无法访问。</li>
+    <li>保存后立即生效，无需重启服务；点击「⚡ 立即复盘」即可补齐待分析消息。</li>
+  </ul>
+</div>
+
+<style>
+  .form-table th {
+    background: transparent; text-transform: none; letter-spacing: 0;
+    font-size: 13px; color: #93a8c8; vertical-align: top; padding-top: 15px;
+  }
+  .form-table td { padding: 9px 11px; }
+  .form-table tr:hover td { background: transparent; box-shadow: none; }
+  .form-table tr td:first-child::before { display: none; }
+  .radio { font-size: 13.5px; cursor: pointer; user-select: none; }
+  .radio input { margin-right: 5px; vertical-align: middle; }
+  .hint { margin-top: 5px; font-size: 12px; color: #6b7d9c; }
+  .hint a { color: #7cc4f0; }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .stat {
+    padding: 13px 16px; border-radius: 10px;
+    background: linear-gradient(150deg, rgba(59,130,246,.12), rgba(17,25,44,.5));
+    border: 1px solid rgba(88,128,200,.2);
+  }
+  .stat-label { font-size: 11.5px; color: #8397b5; letter-spacing: .5px; }
+  .stat-value { margin-top: 3px; font-weight: 700; line-height: 1.2; }
+  .stat-value.ok { color: var(--down); }
+  .stat-value.warn { color: #fb923c; }
+  .stat-value.cyan { color: var(--cyan); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  {% if saved %}
+  toast('设置已保存并生效', 'ok');
+  {% endif %}
+
+  function testAI(btn) {
+    var old = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = '测试中…';
+    fetch('/api/test-ai', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        toast(s.detail, s.ok ? 'ok' : 'warn');
+      })
+      .catch(function () { toast('测试请求失败', 'warn'); })
+      .finally(function () { btn.disabled = false; btn.innerText = old; });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}账户管理 · {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h1>账户管理</h1>
+  <div class="muted">
+    每个证券账户的持仓与复盘报告相互独立；行情与新闻按股票代码共享，
+    同一只股票在多个账户中不会重复采集，也不会重复消耗 AI 额度。
+  </div>
+</div>
+
+{% if error %}
+<div class="card notice-warn">
+  <div style="color:#ffd9a8;">{{ error }}</div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>全部账户（{{ accounts_info|length }} 个）</h2>
+  <table>
+    <tr>
+      <th style="width:52px;">当前</th>
+      <th>账户名称</th>
+      <th style="width:150px;">券商备注</th>
+      <th style="width:80px;">持仓数</th>
+      <th style="width:110px;">持仓市值</th>
+      <th style="width:210px;">操作</th>
+    </tr>
+    {% for a in accounts_info %}
+    <tr>
+      <td>
+        {% if a.id == current_account_id %}
+          <span class="cur-dot" title="当前账户"></span>
+        {% else %}
+          <a href="/switch-account/{{ a.id }}" class="switch-link" title="切换到该账户">切换</a>
+        {% endif %}
+      </td>
+      <td>
+        <input type="text" name="name" value="{{ a.name }}"
+               form="ren-{{ a.id }}" style="width:100%;max-width:220px;">
+      </td>
+      <td>
+        <input type="text" name="broker" value="{{ a.broker or '' }}"
+               form="ren-{{ a.id }}" placeholder="如 华泰/中信" style="width:100%;max-width:140px;">
+      </td>
+      <td class="mono">{{ a.count }}</td>
+      <td class="mono">{{ '%.0f'|format(a.market_value) if a.market_value else '-' }}</td>
+      <td>
+        <button class="btn" type="submit" form="ren-{{ a.id }}">保存</button>
+        {% if accounts_info|length > 1 %}
+        <button class="btn btn-danger" type="submit" form="del-{{ a.id }}">删除</button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {# 表单置于表格外：HTML 不允许 form 跨 td 包裹单元格，通过 form 属性关联 #}
+  {% for a in accounts_info %}
+  <form id="ren-{{ a.id }}" method="post">
+    <input type="hidden" name="action" value="rename">
+    <input type="hidden" name="account_id" value="{{ a.id }}">
+  </form>
+  <form id="del-{{ a.id }}" method="post"
+        onsubmit="return confirm('确认删除账户「{{ a.name }}」？\n该账户下的 {{ a.count }} 条持仓记录与全部历史报告都会被删除，此操作不可恢复。\n（行情与新闻数据不受影响）');">
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="account_id" value="{{ a.id }}">
+  </form>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>新建账户</h2>
+  <form method="post">
+    <input type="hidden" name="action" value="add">
+    <table>
+      <tr><th>账户名称</th><th>券商备注</th><th></th></tr>
+      <tr>
+        <td><input type="text" name="name" placeholder="如 主账户 / 打新账户" required style="width:190px;"></td>
+        <td><input type="text" name="broker" placeholder="如 华泰证券（可留空）" style="width:180px;"></td>
+        <td><button class="btn" type="submit">创建并切换</button></td>
+      </tr>
+    </table>
+  </form>
+  <div class="muted" style="margin-top:9px;">
+    新建后会自动切换到该账户，可直接在「持仓管理」录入这个账户的股票。
+  </div>
+</div>
+
+<style>
+  .mono { font-family: "Consolas", "SF Mono", monospace; }
+  .cur-dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--purple); box-shadow: 0 0 10px 2px rgba(168,85,247,.85);
+  }
+  .switch-link {
+    font-size: 12px; color: #7cc4f0; text-decoration: none;
+    border-bottom: 1px dashed rgba(124,196,240,.5);
+  }
+  .switch-link:hover { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .notice-warn {
+    border-color: rgba(251,146,60,.32) !important;
+    background: linear-gradient(150deg, rgba(251,146,60,.1), rgba(17,25,44,.62)) !important;
+  }
+  .notice-warn::before {
+    background: linear-gradient(90deg, transparent, rgba(251,146,60,.8), transparent) !important;
+  }
+</style>
+{% endblock %}

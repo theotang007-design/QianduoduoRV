@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ name }}<span class="code-chip">{{ code }}</span>{% if industry %}<span class="ind-chip">{{ industry }}</span>{% endif %}</h1>
+  <div class="tech-line" style="margin-top:12px;">{{ tech_summary }}</div>
+  {% if tech_commentary %}
+  <div class="tech-read"><span class="tech-read-tag">技术面解读</span>{{ tech_commentary }}</div>
+  {% endif %}
+  {% if tech_plain %}
+  <div class="tech-plain"><span class="tech-plain-tag">大白话</span>{{ tech_plain }}</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>技术指标</h2>
+  <div class="ind-grid">
+    <div class="ind"><span class="ind-k">MA5</span><span class="ind-v">{{ '%.2f'|format(tech.ma5) if tech.ma5 else '-' }}</span></div>
+    <div class="ind"><span class="ind-k">MA10</span><span class="ind-v">{{ '%.2f'|format(tech.ma10) if tech.ma10 else '-' }}</span></div>
+    <div class="ind"><span class="ind-k">MA20</span><span class="ind-v">{{ '%.2f'|format(tech.ma20) if tech.ma20 else '-' }}</span></div>
+    <div class="ind"><span class="ind-k">DIF</span><span class="ind-v">{{ '%.3f'|format(tech.macd_dif) if tech.macd_dif else '-' }}</span></div>
+    <div class="ind"><span class="ind-k">DEA</span><span class="ind-v">{{ '%.3f'|format(tech.macd_dea) if tech.macd_dea else '-' }}</span></div>
+    <div class="ind"><span class="ind-k">RSI14</span><span class="ind-v">{{ '%.1f'|format(tech.rsi14) if tech.rsi14 else '-' }}</span></div>
+    <div class="ind"><span class="ind-k">量比</span><span class="ind-v">{{ tech.vol_ratio if tech.vol_ratio else '-' }}</span></div>
+  </div>
+</div>
+
+{% if sig and not sig.error %}
+<div class="card">
+  <h2>① 当前指标状态</h2>
+  <p class="muted" style="margin:0 0 12px;">
+    基于 MA20、BIAS20、RSI14、30分钟MACD 的客观数值陈述。前提：本系统只做业绩优质标的的波段趋势分析，
+    不适用于连板妖股；以下内容不预测涨跌、不构成买卖建议。
+  </p>
+  <table class="sig-table">
+    {% for it in sig.state_items %}
+    <tr>
+      <td class="sk">{{ it.k }}</td>
+      <td class="sv mono">{{ it.v }}</td>
+      <td class="sn">{{ it.note }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h2>② 阶段顶部 / 减仓警戒区</h2>
+  <div class="sig-verdict v-{{ sig.top.level }}">{{ sig.top.label }}</div>
+
+  {% if sig.top.confirm_hits %}
+  <div class="sig-sec">
+    <div class="sig-sec-h hit-confirm">已命中的见顶确认信号</div>
+    <ul class="sig-list strong">{% for h in sig.top.confirm_hits %}<li>{{ h }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if sig.top.warn_hits %}
+  <div class="sig-sec">
+    <div class="sig-sec-h hit-warn">已命中的警戒信号</div>
+    <ul class="sig-list strong">{% for h in sig.top.warn_hits %}<li>{{ h }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="sig-sec">
+    <div class="sig-sec-h">进入减仓警戒的条件</div>
+    <ul class="sig-list">{% for r in sig.top.warn_rules %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  <div class="sig-sec">
+    <div class="sig-sec-h">趋势见顶确认的条件</div>
+    <ul class="sig-list">{% for r in sig.top.confirm_rules %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  <div class="sig-sec">
+    <div class="sig-sec-h muted-h">会出现假顶信号的情形</div>
+    <ul class="sig-list dim">{% for r in sig.top.fake_rules %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+</div>
+
+<div class="card">
+  <h2>③ 波段底部 / 低吸观察区</h2>
+  <div class="sig-verdict v-{{ sig.bottom.level }}">{{ sig.bottom.label }}</div>
+
+  {% if sig.bottom.zone %}
+  <div class="zone-grid">
+    <div class="zone">
+      <span class="zone-k">MA20（趋势中枢）</span>
+      <span class="zone-v mono">{{ '%.2f'|format(sig.bottom.zone.ma20) }}</span>
+    </div>
+    <div class="zone">
+      <span class="zone-k">超跌观察区间</span>
+      <span class="zone-v mono">{{ '%.2f'|format(sig.bottom.zone.oversold_low) }} ~ {{ '%.2f'|format(sig.bottom.zone.oversold_high) }}</span>
+    </div>
+    <div class="zone">
+      <span class="zone-k">近20日低点</span>
+      <span class="zone-v mono">{{ '%.2f'|format(sig.bottom.zone.low20) }}</span>
+    </div>
+    {% if sig.bottom.stop_loss %}
+    <div class="zone">
+      <span class="zone-k">止损参考阈值</span>
+      <span class="zone-v mono warn-v">{{ '%.2f'|format(sig.bottom.stop_loss) }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="muted" style="font-size:11.5px;margin:-2px 0 12px;">
+    区间为指标推导的观察范围，不是最低点预测；止损阈值取近20日低点下方3%。
+  </div>
+  {% endif %}
+
+  {% if sig.bottom.confirm_hits %}
+  <div class="sig-sec">
+    <div class="sig-sec-h hit-confirm">已命中的止跌确认信号</div>
+    <ul class="sig-list strong">{% for h in sig.bottom.confirm_hits %}<li>{{ h }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if sig.bottom.watch_hits %}
+  <div class="sig-sec">
+    <div class="sig-sec-h hit-watch">已命中的观察信号</div>
+    <ul class="sig-list strong">{% for h in sig.bottom.watch_hits %}<li>{{ h }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="sig-sec">
+    <div class="sig-sec-h">进入低吸观察的条件</div>
+    <ul class="sig-list">{% for r in sig.bottom.watch_rules %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% if sig.bottom.confirm_rules %}
+  <div class="sig-sec">
+    <div class="sig-sec-h">止跌确认所需的共振信号</div>
+    <ul class="sig-list">{% for r in sig.bottom.confirm_rules %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if sig.bottom.fake_rules %}
+  <div class="sig-sec">
+    <div class="sig-sec-h muted-h">属于下跌中继假底的情形</div>
+    <ul class="sig-list dim">{% for r in sig.bottom.fake_rules %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</div>
+{% elif sig and sig.error %}
+<div class="card">
+  <h2>波段趋势分析</h2>
+  <div class="no-news">{{ sig.error }}，请先在持仓页点击「⟳ 刷新最新价」补齐行情</div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>K线走势（近60个交易日）</h2>
+  <div id="kchart" style="width:100%;height:440px;"></div>
+</div>
+
+<div class="card">
+  <h2>近30天相关消息</h2>
+  {% if not news %}
+    <div class="no-news">近30天无相关消息记录</div>
+  {% endif %}
+  {% for n in news %}
+  <div class="news-item">
+    <div class="news-title">
+      {% set sent = n.sentiment or '中性' %}
+      <span class="tag {{ 'tag-good' if sent=='利好' else ('tag-bad' if sent=='利空' else 'tag-neutral') }}">{{ sent }}</span>
+      <span class="tag tag-cat">{{ n.category or '其他' }}</span>
+      {% if n.scope == '行业' %}<span class="tag tag-scope">行业</span>{% endif %}
+      {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
+      {% else %}{{ n.title }}{% endif %}
+    </div>
+    {% if n.reason %}<div class="news-reason">AI解读：{{ n.reason }}</div>{% endif %}
+    <div class="news-meta">{{ n.source }} · {{ n.publish_time }} · 相关性 {{ n.relevance or '-' }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<style>
+  .code-chip {
+    margin-left: 10px; padding: 2px 9px; border-radius: 6px;
+    font-size: 12.5px; font-weight: 500; font-family: "Consolas", monospace;
+    color: #8fb4dd; background: rgba(88,128,200,.15);
+    border: 1px solid rgba(88,128,200,.25); vertical-align: middle;
+  }
+  .ind-chip {
+    margin-left: 8px; padding: 2px 9px; border-radius: 6px;
+    font-size: 12px; font-weight: 500; vertical-align: middle;
+    color: #ffc182; background: rgba(251,146,60,.14);
+    border: 1px solid rgba(251,146,60,.32);
+  }
+  .tech-read {
+    margin: 10px 0 0; padding: 9px 14px;
+    font-size: 12.5px; color: #c3d6ee; line-height: 1.7;
+    background: linear-gradient(90deg, rgba(168,85,247,.09), rgba(168,85,247,.01));
+    border-left: 2px solid var(--purple); border-radius: 0 7px 7px 0;
+  }
+  .tech-read-tag {
+    display: inline-block; margin-right: 8px; padding: 1px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 700;
+    color: #d5aeff; background: rgba(168,85,247,.18);
+    border: 1px solid rgba(168,85,247,.34);
+  }
+  .tech-plain {
+    margin: 8px 0 0; padding: 10px 14px;
+    font-size: 13px; color: #d3e4f7; line-height: 1.85;
+    background: linear-gradient(90deg, rgba(0,229,155,.08), rgba(0,229,155,.01));
+    border-left: 2px solid var(--down); border-radius: 0 7px 7px 0;
+  }
+  .tech-plain-tag {
+    display: inline-block; margin-right: 8px; padding: 1px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 700;
+    color: #5df0bd; background: rgba(0,229,155,.16);
+    border: 1px solid rgba(0,229,155,.34);
+  }
+  .tag-scope {
+    background: rgba(251,146,60,.16); color: #ffc182;
+    border: 1px solid rgba(251,146,60,.36); font-weight: 600;
+  }
+  /* ===== 波段信号 ===== */
+  .mono { font-family: "Consolas", "SF Mono", monospace; }
+  .sig-table { width: 100%; border-collapse: collapse; }
+  .sig-table td {
+    padding: 8px 10px; font-size: 12.5px;
+    border-bottom: 1px solid rgba(88,128,200,.1); vertical-align: top;
+  }
+  .sig-table tr:last-child td { border-bottom: 0; }
+  .sig-table .sk { width: 118px; color: #8397b5; }
+  .sig-table .sv {
+    width: 150px; font-weight: 700; color: #d6e8fb; white-space: nowrap;
+  }
+  .sig-table .sn { color: #b3c8e4; }
+  .sig-verdict {
+    display: inline-block; margin: 0 0 14px; padding: 6px 14px;
+    border-radius: 7px; font-size: 13.5px; font-weight: 700;
+    color: #b9cde8; background: rgba(88,128,200,.1);
+    border: 1px solid rgba(88,128,200,.22);
+  }
+  .sig-verdict.v-confirm {
+    color: #ffb0a8; background: rgba(249,112,102,.12);
+    border-color: rgba(249,112,102,.36);
+  }
+  .sig-verdict.v-warn {
+    color: #ffd479; background: rgba(251,191,36,.12);
+    border-color: rgba(251,191,36,.36);
+  }
+  .sig-verdict.v-watch {
+    color: #7dd3fc; background: rgba(56,189,248,.12);
+    border-color: rgba(56,189,248,.36);
+  }
+  .sig-verdict.v-disabled { opacity: .8; }
+  .sig-sec { margin-bottom: 13px; }
+  .sig-sec:last-child { margin-bottom: 0; }
+  .sig-sec-h {
+    margin-bottom: 5px; font-size: 12px; font-weight: 700;
+    color: #a9c0de; letter-spacing: .3px;
+  }
+  .sig-sec-h.hit-confirm { color: #ffb0a8; }
+  .sig-sec-h.hit-warn { color: #ffd479; }
+  .sig-sec-h.hit-watch { color: #7dd3fc; }
+  .sig-sec-h.muted-h { color: #7f9dc4; }
+  .sig-list {
+    margin: 0; padding-left: 19px;
+    font-size: 12.5px; color: #b3c8e4; line-height: 1.85;
+  }
+  .sig-list.strong { color: #d6e8fb; }
+  .sig-list.dim { color: #8fa6c4; }
+  .zone-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 10px; margin-bottom: 14px;
+  }
+  .zone {
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 10px 13px; border-radius: 9px;
+    background: linear-gradient(150deg, rgba(56,189,248,.09), rgba(17,25,44,.45));
+    border: 1px solid rgba(88,128,200,.18);
+  }
+  .zone-k { font-size: 11px; color: #8397b5; letter-spacing: .4px; }
+  .zone-v {
+    font-size: 15px; font-weight: 700; color: #d6e8fb;
+    font-family: "Consolas", "SF Mono", monospace;
+  }
+  .zone-v.warn-v { color: #ffb0a8; }
+  .ind-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px;
+  }
+  .ind {
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 11px 14px; border-radius: 9px;
+    background: linear-gradient(150deg, rgba(59,130,246,.1), rgba(17,25,44,.45));
+    border: 1px solid rgba(88,128,200,.18);
+  }
+  .ind-k { font-size: 11px; color: #8397b5; letter-spacing: .6px; }
+  .ind-v {
+    font-size: 17px; font-weight: 700; color: #d6e8fb;
+    font-family: "Consolas", "SF Mono", monospace;
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+fetch('/api/kline/{{ code }}').then(r => r.json()).then(d => {
+  var el = document.getElementById('kchart');
+  if (!d.dates || !d.dates.length) {
+    el.innerHTML = '<div class="empty">暂无行情数据，请先运行一次复盘</div>';
+    return;
+  }
+  var chart = echarts.init(el);
+  var axis = { axisLine: { lineStyle: { color: 'rgba(88,128,200,.35)' } },
+               axisLabel: { color: '#7c8cab', fontSize: 11 } };
+  chart.setOption({
+    backgroundColor: 'transparent',
+    animationDuration: 700,
+    tooltip: {
+      trigger: 'axis', axisPointer: { type: 'cross' },
+      backgroundColor: 'rgba(9,14,26,.94)',
+      borderColor: 'rgba(56,189,248,.35)',
+      textStyle: { color: '#dbe6f5', fontSize: 12 }
+    },
+    legend: {
+      data: ['K线', 'MA5', 'MA10', 'MA20'], top: 0,
+      textStyle: { color: '#8397b5', fontSize: 12 },
+      inactiveColor: '#4a5a76'
+    },
+    grid: [
+      { left: 58, right: 22, top: 34, height: 244 },
+      { left: 58, right: 22, top: 312, height: 84 }
+    ],
+    xAxis: [
+      Object.assign({}, axis, { type: 'category', data: d.dates, gridIndex: 0,
+                                axisLabel: { show: false } }),
+      Object.assign({}, axis, { type: 'category', data: d.dates, gridIndex: 1 })
+    ],
+    yAxis: [
+      Object.assign({}, axis, { scale: true, gridIndex: 0,
+        splitLine: { lineStyle: { color: 'rgba(88,128,200,.1)' } } }),
+      Object.assign({}, axis, { gridIndex: 1, splitNumber: 2,
+        splitLine: { lineStyle: { color: 'rgba(88,128,200,.08)' } } })
+    ],
+    dataZoom: [
+      { type: 'inside', xAxisIndex: [0, 1], start: 40, end: 100 }
+    ],
+    series: [
+      {
+        name: 'K线', type: 'candlestick', data: d.kline,
+        itemStyle: {
+          color: '#ff4d5e', color0: '#00e59b',
+          borderColor: '#ff4d5e', borderColor0: '#00e59b'
+        }
+      },
+      { name: 'MA5', type: 'line', data: d.ma5, smooth: true, showSymbol: false,
+        lineStyle: { width: 1.4, color: '#22d3ee' } },
+      { name: 'MA10', type: 'line', data: d.ma10, smooth: true, showSymbol: false,
+        lineStyle: { width: 1.4, color: '#facc15' } },
+      { name: 'MA20', type: 'line', data: d.ma20, smooth: true, showSymbol: false,
+        lineStyle: { width: 1.4, color: '#c084fc' } },
+      { name: '成交量', type: 'bar', data: d.volume, xAxisIndex: 1, yAxisIndex: 1,
+        itemStyle: { color: 'rgba(96,165,250,.55)' } }
+    ]
+  });
+  window.addEventListener('resize', function () { chart.resize(); });
+});
+</script>
+{% endblock %}

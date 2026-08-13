@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% block title %}{{ report.date }} 复盘 · {{ app_name }}{% endblock %}
+{% block content %}
+
+{% set ns = namespace(up=0, down=0, flat=0, news=0) %}
+{% for s in report.stocks %}
+  {% set pct = (s.tech or {}).get('pct_change') %}
+  {% if pct is not none %}
+    {% if pct > 0 %}{% set ns.up = ns.up + 1 %}
+    {% elif pct < 0 %}{% set ns.down = ns.down + 1 %}
+    {% else %}{% set ns.flat = ns.flat + 1 %}{% endif %}
+  {% endif %}
+  {% set ns.news = ns.news + s.news['利好']|length + s.news['利空']|length + s.news['中性']|length %}
+{% endfor %}
+
+<div class="card">
+  <h1>每日复盘报告 · {{ report.date }}</h1>
+  <div class="muted">
+    {% if report.account_name %}账户：{{ report.account_name }} · {% endif %}生成时间 {{ generated_at }}
+  </div>
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="stat-label">持仓数</div>
+      <div class="stat-value" data-count="{{ report.stocks|length }}">{{ report.stocks|length }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">上涨</div>
+      <div class="stat-value up" data-count="{{ ns.up }}">{{ ns.up }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">下跌</div>
+      <div class="stat-value down" data-count="{{ ns.down }}">{{ ns.down }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">相关消息</div>
+      <div class="stat-value cyan" data-count="{{ ns.news }}">{{ ns.news }}</div>
+    </div>
+  </div>
+</div>
+
+{% if not report.ai_ready %}
+<div class="card notice-warn">
+  <h2 style="border-bottom-color:rgba(251,146,60,.3);">AI分析未启用</h2>
+  <p class="muted" style="margin:0 0 8px;">
+    当前<b style="color:#ffb866;">未配置 AI API Key</b>，消息已抓取但未做相关性与情绪判断，
+    因此消息面统一显示为"无重大消息"——这并不代表当日真的没有消息。
+    {% if report.pending_news %}
+    <br>本期共有 <b style="color:#ffb866;">{{ report.pending_news }}</b> 条已抓取消息等待分析。
+    {% endif %}
+  </p>
+  <p class="muted" style="margin:0;">
+    前往 <a href="/settings" style="color:#7cc4f0;">「设置」</a> 页面填入 API Key
+    即可启用，保存后点击「⚡ 立即复盘」补齐分析。
+  </p>
+</div>
+{% elif report.pending_news %}
+<div class="card notice-warn">
+  <h2 style="border-bottom-color:rgba(251,146,60,.3);">部分消息待分析</h2>
+  <p class="muted" style="margin:0;">
+    有 <b style="color:#ffb866;">{{ report.pending_news }}</b> 条消息尚未完成AI分析
+    （可能因超出每日分析上限或调用失败）。再次点击「⚡ 立即复盘」会自动续跑。
+  </p>
+</div>
+{% endif %}
+
+{% if report.alerts %}
+<div class="card sig-alert-card">
+  <h2 style="border-bottom-color:rgba(168,85,247,.3);">波段信号提醒</h2>
+  <p class="muted" style="margin:0 0 12px;">
+    以下标的触发了顶部或底部的观察条件。仅为指标状态提示，不构成买卖建议。
+  </p>
+  <div class="alert-list">
+    {% for a in report.alerts %}
+    <a href="/stock/{{ a.code }}" class="alert-item lv-{{ a.level }}">
+      <span class="alert-badge {{ 'top' if a.type == 'top' else 'bot' }}">
+        {{ '顶' if a.type == 'top' else '底' }}
+      </span>
+      <span class="alert-name">{{ a.name }}</span>
+      <span class="alert-code mono">{{ a.code }}</span>
+      <span class="alert-text">{{ a.text }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>持仓总览（按量能分组）</h2>
+
+  {% set groups = [('放量', 'g-up'), ('缩量', 'g-down'), ('量能平稳', 'g-flat'), ('无数据', 'g-none')] %}
+  {% for gname, gcls in groups %}
+    {% set items = report.stocks | selectattr('tech.vol_level', 'equalto', gname) | list %}
+    {% if items %}
+    <div class="vol-group">
+      <div class="vol-head">
+        <span class="vol-tag {{ gcls }}">{{ gname }}</span>
+        <span class="muted">{{ items|length }} 只</span>
+        <span class="vol-desc muted">
+          {% if gname == '放量' %}成交量为近5日均量的1.5倍以上
+          {% elif gname == '缩量' %}成交量低于近5日均量的0.7倍
+          {% elif gname == '量能平稳' %}成交量处于近5日均量的0.7～1.5倍之间
+          {% else %}行情数据不足，无法计算量比{% endif %}
+        </span>
+      </div>
+      <table class="ov-table">
+        <tr>
+          <th style="width:104px;">股票</th>
+          <th style="width:76px;">代码</th>
+          <th style="width:72px;">收盘价</th>
+          <th style="width:78px;">涨跌幅</th>
+          <th style="width:150px;">MA5</th>
+          <th style="width:150px;">MA20</th>
+          <th style="width:60px;">量比</th>
+          <th></th>
+        </tr>
+        {% for s in items %}
+        {% set t = s.tech or {} %}
+        <tr>
+          <td><a href="/stock/{{ s.code }}">{{ s.name }}</a></td>
+          <td class="mono">{{ s.code }}</td>
+          <td class="mono">{{ t.close if t.close else '-' }}</td>
+          <td class="mono">
+            {% if t.pct_change is not none %}
+              <span class="{{ 'up' if t.pct_change > 0 else ('down' if t.pct_change < 0 else 'flat') }}">
+                {{ '%+.2f'|format(t.pct_change) }}%
+              </span>
+            {% else %}-{% endif %}
+          </td>
+          <td class="mono nowrap">
+            {% if t.ma5 %}
+              {{ '%.2f'|format(t.ma5) }}
+              {% if t.dev_ma5 is not none %}
+                <span class="dev {{ 'up' if t.dev_ma5 > 0 else ('down' if t.dev_ma5 < 0 else 'flat') }}
+                             {{ 'dev-far' if t.dev_ma5|abs >= 10 }}">{{ '%+.1f'|format(t.dev_ma5) }}%</span>
+              {% endif %}
+            {% else %}-{% endif %}
+          </td>
+          <td class="mono nowrap">
+            {% if t.ma20 %}
+              {{ '%.2f'|format(t.ma20) }}
+              {% if t.dev_ma20 is not none %}
+                <span class="dev {{ 'up' if t.dev_ma20 > 0 else ('down' if t.dev_ma20 < 0 else 'flat') }}
+                             {{ 'dev-far' if t.dev_ma20|abs >= 10 }}">{{ '%+.1f'|format(t.dev_ma20) }}%</span>
+              {% endif %}
+            {% else %}-{% endif %}
+          </td>
+          <td class="mono">{{ t.vol_ratio if t.vol_ratio else '-' }}</td>
+          <td></td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>逐股详情</h2>
+  {% for s in report.stocks %}
+  <div class="stock-block">
+    <h3><a href="/stock/{{ s.code }}">{{ s.name }}<span class="code-chip">{{ s.code }}</span></a></h3>
+    <div class="tech-line">{{ s.tech_summary }}</div>
+    {% if s.tech_commentary %}
+    <div class="tech-read">
+      <span class="tech-read-tag">技术面解读</span>{{ s.tech_commentary }}
+    </div>
+    {% endif %}
+    {% if s.tech_plain %}
+    <div class="tech-plain">
+      <span class="tech-plain-tag">大白话</span>{{ s.tech_plain }}
+    </div>
+    {% endif %}
+    {% set sig = s.signal %}
+    {% if sig and not sig.error %}
+    <div class="sig-row">
+      <div class="sig-box sig-{{ sig.top.level }}">
+        <div class="sig-head">阶段顶部 · {{ sig.top.label }}</div>
+        {% set hits = sig.top.confirm_hits + sig.top.warn_hits %}
+        {% if hits %}
+        <ul class="sig-hits">
+          {% for h in hits %}<li>{{ h }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <div class="sig-none">当前无顶部警戒信号命中</div>
+        {% endif %}
+      </div>
+      <div class="sig-box sig-{{ sig.bottom.level }}">
+        <div class="sig-head">波段底部 · {{ sig.bottom.label }}</div>
+        {% set bhits = sig.bottom.confirm_hits + sig.bottom.watch_hits %}
+        {% if bhits %}
+        <ul class="sig-hits">
+          {% for h in bhits %}<li>{{ h }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <div class="sig-none">当前无底部观察信号命中</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="sig-more">
+      完整警戒条件、确认条件与假信号场景见
+      <a href="/stock/{{ s.code }}">个股详情</a>
+    </div>
+    {% endif %}
+    {% if not s.has_news %}
+      {% if s.pending_news %}
+        <div class="no-news">
+          有 {{ s.pending_news }} 条消息待AI分析，暂未纳入报告
+        </div>
+      {% else %}
+        <div class="no-news">今日无重大消息</div>
+      {% endif %}
+    {% else %}
+      {% for sent in ['利好', '利空', '中性'] %}
+        {% for n in s.news[sent] %}
+        <div class="news-item">
+          <div class="news-title">
+            <span class="tag {{ 'tag-good' if sent=='利好' else ('tag-bad' if sent=='利空' else 'tag-neutral') }}">{{ sent }}</span>
+            <span class="tag tag-cat">{{ n.category }}</span>
+            {% if n.scope == '行业' %}<span class="tag tag-scope">行业</span>{% endif %}
+            {% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
+            {% else %}{{ n.title }}{% endif %}
+          </div>
+          {% if n.reason %}<div class="news-reason">AI解读：{{ n.reason }}</div>{% endif %}
+          <div class="news-meta">{{ n.source }} · {{ n.publish_time }} · 相关性 {{ n.relevance }}</div>
+        </div>
+        {% endfor %}
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% if dates %}
+<div class="card">
+  <h2>快速切换日期</h2>
+  <div class="date-list">
+    {% for d in dates[:20] %}<a href="/report/{{ d.date }}">{{ d.date }}</a>{% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<style>
+  .notice-warn {
+    border-color: rgba(251,146,60,.32) !important;
+    background: linear-gradient(150deg, rgba(251,146,60,.1), rgba(17,25,44,.62)) !important;
+  }
+  .notice-warn::before {
+    background: linear-gradient(90deg, transparent, rgba(251,146,60,.8), transparent) !important;
+  }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .stat {
+    padding: 13px 16px; border-radius: 10px;
+    background: linear-gradient(150deg, rgba(59,130,246,.12), rgba(17,25,44,.5));
+    border: 1px solid rgba(88,128,200,.2);
+  }
+  .stat-label { font-size: 11.5px; color: #8397b5; letter-spacing: .5px; }
+  .stat-value {
+    margin-top: 3px; font-size: 25px; font-weight: 700; line-height: 1.2;
+    font-family: "Consolas", "SF Mono", monospace;
+  }
+  .stat-value.cyan { color: var(--cyan); text-shadow: 0 0 16px rgba(34,211,238,.5); }
+  .mono { font-family: "Consolas", "SF Mono", monospace; }
+  /* 量能分组 */
+  .vol-group { margin-bottom: 22px; }
+  .vol-group:last-child { margin-bottom: 0; }
+  .vol-head {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; margin-bottom: 8px;
+  }
+  .vol-tag {
+    padding: 3px 11px; border-radius: 6px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: .5px;
+  }
+  .g-up { background: rgba(255,77,94,.16); color: #ff8d99; border: 1px solid rgba(255,77,94,.35); }
+  .g-down { background: rgba(0,229,155,.14); color: #5df0bd; border: 1px solid rgba(0,229,155,.32); }
+  .g-flat { background: rgba(96,165,250,.15); color: #a8cdf5; border: 1px solid rgba(96,165,250,.32); }
+  .g-none { background: rgba(148,163,184,.14); color: #a9bbd4; border: 1px solid rgba(148,163,184,.3); }
+  .vol-desc { font-size: 12px; }
+  /* 均线偏离幅度 */
+  .dev { margin-left: 5px; font-size: 11.5px; opacity: .92; }
+  /* 偏离达10%以上：加框强调，便于快速识别偏离过大的持仓 */
+  .dev-far {
+    padding: 1px 5px; border-radius: 4px; font-weight: 700; opacity: 1;
+    border: 1px solid currentColor;
+  }
+  /* 总览表：列宽收紧，均线数值与偏离标记同行不换行 */
+  .ov-table { table-layout: fixed; }
+  .ov-table .nowrap { white-space: nowrap; }
+  .ov-table th:last-child, .ov-table td:last-child { width: auto; }
+  /* 技术面解读 */
+  .tech-read {
+    margin: -4px 0 11px; padding: 9px 14px;
+    font-size: 12.5px; color: #c3d6ee; line-height: 1.7;
+    background: linear-gradient(90deg, rgba(168,85,247,.09), rgba(168,85,247,.01));
+    border-left: 2px solid var(--purple); border-radius: 0 7px 7px 0;
+  }
+  .tech-read-tag {
+    display: inline-block; margin-right: 8px; padding: 1px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 700;
+    color: #d5aeff; background: rgba(168,85,247,.18);
+    border: 1px solid rgba(168,85,247,.34);
+  }
+  /* 行业消息标签 */
+  .tag-scope {
+    background: rgba(251,146,60,.16); color: #ffc182;
+    border: 1px solid rgba(251,146,60,.36); font-weight: 600;
+  }
+  /* 大白话说明 */
+  .tech-plain {
+    margin: -4px 0 12px; padding: 10px 14px;
+    font-size: 13px; color: #d3e4f7; line-height: 1.85;
+    background: linear-gradient(90deg, rgba(0,229,155,.08), rgba(0,229,155,.01));
+    border-left: 2px solid var(--down); border-radius: 0 7px 7px 0;
+  }
+  .tech-plain-tag {
+    display: inline-block; margin-right: 8px; padding: 1px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 700;
+    color: #5df0bd; background: rgba(0,229,155,.16);
+    border: 1px solid rgba(0,229,155,.34);
+  }
+  /* ===== 波段信号提醒 ===== */
+  .alert-list { display: flex; flex-direction: column; gap: 7px; }
+  .alert-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 13px; border-radius: 8px; text-decoration: none;
+    background: rgba(88,128,200,.07);
+    border: 1px solid rgba(88,128,200,.16);
+    border-left-width: 3px;
+    transition: background .15s, transform .15s;
+  }
+  .alert-item:hover { background: rgba(88,128,200,.13); transform: translateX(2px); }
+  .alert-item.lv-confirm { border-left-color: #f97066; }
+  .alert-item.lv-warn { border-left-color: #fbbf24; }
+  .alert-item.lv-watch { border-left-color: #38bdf8; }
+  .alert-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 21px; height: 21px; flex-shrink: 0;
+    border-radius: 5px; font-size: 11.5px; font-weight: 700;
+  }
+  .alert-badge.top {
+    color: #ffb0a8; background: rgba(249,112,102,.16);
+    border: 1px solid rgba(249,112,102,.34);
+  }
+  .alert-badge.bot {
+    color: #7dd3fc; background: rgba(56,189,248,.16);
+    border: 1px solid rgba(56,189,248,.34);
+  }
+  .alert-name { font-size: 13.5px; font-weight: 600; color: #dbe9fb; }
+  .alert-code { font-size: 11.5px; color: #7f9dc4; }
+  .alert-text { margin-left: auto; font-size: 12.5px; color: #b9cde8; }
+  /* ===== 逐股信号双栏 ===== */
+  .sig-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin: 0 0 8px;
+  }
+  @media (max-width: 780px) { .sig-row { grid-template-columns: 1fr; } }
+  .sig-box {
+    padding: 9px 13px; border-radius: 8px;
+    background: rgba(88,128,200,.06);
+    border: 1px solid rgba(88,128,200,.15);
+    border-left-width: 2px; border-left-color: rgba(88,128,200,.3);
+  }
+  .sig-box.sig-confirm { border-left-color: #f97066; background: rgba(249,112,102,.06); }
+  .sig-box.sig-warn { border-left-color: #fbbf24; background: rgba(251,191,36,.05); }
+  .sig-box.sig-watch { border-left-color: #38bdf8; background: rgba(56,189,248,.05); }
+  .sig-box.sig-disabled { border-left-color: #6b7f9c; opacity: .78; }
+  .sig-head {
+    font-size: 12.5px; font-weight: 700; color: #d3e4f7; margin-bottom: 5px;
+  }
+  .sig-hits {
+    margin: 0; padding-left: 17px;
+    font-size: 12px; color: #b3c8e4; line-height: 1.75;
+  }
+  .sig-none { font-size: 12px; color: #7f9dc4; }
+  .sig-more { margin: 0 0 11px; font-size: 11.5px; color: #7f9dc4; }
+  .sig-more a { color: #7cc4f0; }
+  .stock-block {
+    padding: 15px 0 5px; border-top: 1px solid rgba(88,128,200,.1);
+  }
+  .stock-block:first-of-type { border-top: 0; padding-top: 2px; }
+  .code-chip {
+    margin-left: 9px; padding: 1px 8px; border-radius: 5px;
+    font-size: 11.5px; font-weight: 500; font-family: "Consolas", monospace;
+    color: #8fb4dd; background: rgba(88,128,200,.15);
+    border: 1px solid rgba(88,128,200,.25);
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="coin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="55%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="trend" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#5df0bd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 铜钱外圈：象征"钱" -->
+  <circle cx="32" cy="32" r="26" fill="none" stroke="url(#coin)" stroke-width="4"/>
+
+  <!-- 铜钱方孔（下移留出走势线空间） -->
+  <rect x="26" y="36" width="12" height="12" rx="2"
+        fill="none" stroke="url(#coin)" stroke-width="3" opacity=".9"/>
+
+  <!-- 上升走势线：象征"多多" -->
+  <path d="M15 34 L24 25 L31 30 L44 16"
+        fill="none" stroke="url(#trend)" stroke-width="4.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 走势线末端箭头 -->
+  <path d="M36.5 15.5 L45 15 L44.5 23.5"
+        fill="none" stroke="url(#trend)" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

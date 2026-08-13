@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/logo.svg?v=2">
+  <script>
+    // 尽早应用动效偏好，避免首屏闪烁。默认开启动效。
+    (function () {
+      try {
+        if (localStorage.getItem('motion') === 'reduced') {
+          document.documentElement.setAttribute('data-motion', 'reduced');
+        }
+      } catch (e) {}
+      })();
+  </script>
+  <style>
+    :root {
+      --bg: #070b14;
+      --bg-2: #0b1120;
+      --panel: rgba(17, 25, 44, .72);
+      --border: rgba(88, 128, 200, .18);
+      --border-lit: rgba(80, 210, 255, .45);
+      --txt: #dbe6f5;
+      --txt-dim: #7c8cab;
+      --cyan: #22d3ee;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --up: #ff4d5e;
+      --down: #00e59b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; color: var(--txt); background: var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", -apple-system, sans-serif;
+      line-height: 1.6; -webkit-font-smoothing: antialiased;
+    }
+    /* 背景：深色底 + 顶部极淡光晕（静止） */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: -5;
+      background:
+        radial-gradient(1100px 520px at 20% -12%, rgba(59,130,246,.10), transparent 62%),
+        radial-gradient(900px 460px at 85% -6%, rgba(168,85,247,.07), transparent 62%),
+        var(--bg);
+    }
+    /* 极淡静止网格，仅提供层次感 */
+    body::after {
+      content: ""; position: fixed; inset: 0; z-index: -4; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(90,150,230,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(90,150,230,.04) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: radial-gradient(ellipse 75% 55% at 50% 30%, #000 35%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 30%, #000 35%, transparent 100%);
+    }
+
+    /* ============ 顶栏 ============ */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 26px; height: 62px; padding: 0 26px;
+      background: rgba(9, 14, 26, .82);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(56,189,248,.5), rgba(168,85,247,.4), transparent);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 17px; font-weight: 700; letter-spacing: .5px;
+      white-space: nowrap; color: #dbe9fb;
+    }
+    .brand-logo {
+      width: 25px; height: 25px; flex-shrink: 0;
+      filter: drop-shadow(0 0 6px rgba(56,189,248,.5));
+    }
+    .nav-links { display: flex; gap: 4px; }
+    .nav a {
+      position: relative; padding: 7px 14px; border-radius: 8px;
+      color: var(--txt-dim); text-decoration: none; font-size: 14px;
+      transition: color .22s, background .22s;
+    }
+    .nav a:hover { color: #eaf3ff; background: rgba(96,165,250,.1); }
+    .nav a.active { color: #eaf3ff; background: rgba(96,165,250,.14); }
+    .nav a.active::after {
+      content: ""; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 2px;
+      border-radius: 2px; background: linear-gradient(90deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 8px rgba(34,211,238,.9);
+    }
+    .spacer { flex: 1; }
+    .nav form { margin: 0; }
+
+    /* ============ 按钮 ============ */
+    .btn {
+      position: relative; overflow: hidden;
+      padding: 7px 16px; border: 1px solid rgba(56,189,248,.42); border-radius: 8px;
+      background: linear-gradient(135deg, rgba(34,211,238,.16), rgba(59,130,246,.24));
+      color: #d8f3ff; font-size: 13px; font-family: inherit; cursor: pointer;
+      transition: box-shadow .25s, transform .12s, border-color .25s;
+    }
+    .btn:hover {
+      border-color: var(--border-lit);
+      box-shadow: 0 0 0 1px rgba(56,189,248,.25), 0 6px 22px -6px rgba(34,211,238,.6);
+    }
+    .btn:active { transform: translateY(1px); }
+    /* 扫光 */
+    .btn::after {
+      content: ""; position: absolute; top: 0; left: -120%; width: 55%; height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,.32), transparent);
+      transition: left .55s ease;
+    }
+    .btn:hover::after { left: 130%; }
+    .btn-danger {
+      border-color: rgba(255,77,94,.4);
+      background: linear-gradient(135deg, rgba(255,77,94,.14), rgba(190,30,60,.22));
+      color: #ffd9de;
+    }
+    .btn-danger:hover { box-shadow: 0 0 0 1px rgba(255,77,94,.25), 0 6px 22px -6px rgba(255,77,94,.6); }
+    .btn-run { padding: 8px 18px; font-weight: 600; letter-spacing: .3px; }
+    /* 运行中：脉冲呼吸 + 禁用扫光 */
+    .btn-run.running {
+      cursor: progress; opacity: .9;
+      animation: runPulse 1.3s ease-in-out infinite;
+    }
+    .btn-run.running::after { display: none; }
+    @keyframes runPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,211,238,.5); }
+      50%     { box-shadow: 0 0 0 7px rgba(34,211,238,0); }
+    }
+
+    /* ============ 容器/卡片 ============ */
+    .container { max-width: 1180px; margin: 26px auto 40px; padding: 0 22px; }
+    .card {
+      position: relative;
+      background: var(--panel); backdrop-filter: blur(10px);
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px 22px; margin-bottom: 18px;
+      box-shadow: 0 12px 40px -22px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.035);
+      animation: rise .5s cubic-bezier(.2,.7,.3,1) both;
+      transition: transform .3s cubic-bezier(.2,.7,.3,1), box-shadow .3s, border-color .3s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(88,128,200,.32);
+      box-shadow: 0 20px 52px -24px rgba(0,0,0,.95),
+                  0 0 0 1px rgba(56,189,248,.1),
+                  inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(16px) scale(.99); }
+      to   { opacity: 1; transform: none; }
+    }
+    /* 卡片依次入场 */
+    .card:nth-of-type(1) { animation-delay: .04s; }
+    .card:nth-of-type(2) { animation-delay: .12s; }
+    .card:nth-of-type(3) { animation-delay: .2s; }
+    .card:nth-of-type(4) { animation-delay: .28s; }
+    .card:nth-of-type(5) { animation-delay: .36s; }
+    /* 卡片顶部霓虹描边（静止） */
+    .card::before {
+      content: ""; position: absolute; top: -1px; left: 22px; right: 22px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(56,189,248,.6), rgba(168,85,247,.45), transparent);
+    }
+    h1 { font-size: 21px; margin: 0 0 6px; letter-spacing: .3px; }
+    h2 {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 15px; margin: 0 0 15px; padding-bottom: 11px;
+      border-bottom: 1px solid var(--border); letter-spacing: .3px;
+    }
+    h2::before {
+      content: ""; width: 3px; height: 14px; border-radius: 2px;
+      background: linear-gradient(180deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 8px rgba(34,211,238,.8);
+    }
+    h3 { font-size: 15px; margin: 0 0 9px; }
+    h3 a { color: #eaf3ff; text-decoration: none; }
+    h3 a:hover { color: var(--cyan); }
+    .muted { color: var(--txt-dim); font-size: 13px; }
+    code {
+      padding: 2px 7px; border-radius: 5px; font-size: 12.5px;
+      background: rgba(56,189,248,.12); color: #a5eeff;
+      border: 1px solid rgba(56,189,248,.2);
+    }
+
+    /* ============ 表格 ============ */
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { padding: 10px 11px; text-align: left; border-bottom: 1px solid rgba(88,128,200,.11); }
+    th {
+      font-size: 12px; font-weight: 600; letter-spacing: .6px;
+      color: #93a8c8; text-transform: uppercase;
+      background: rgba(59,130,246,.07);
+    }
+    th:first-child { border-top-left-radius: 8px; }
+    th:last-child { border-top-right-radius: 8px; }
+    tbody tr, table tr { transition: background .22s, box-shadow .22s; }
+    table tr:hover td {
+      background: rgba(96,165,250,.075);
+      box-shadow: inset 0 0 22px -12px rgba(56,189,248,.5);
+    }
+    /* 行内首列左侧高亮条 */
+    table tr td:first-child { position: relative; }
+    table tr td:first-child::before {
+      content: ""; position: absolute; left: 0; top: 12%; bottom: 12%; width: 2px;
+      border-radius: 2px; background: var(--cyan);
+      opacity: 0; transform: scaleY(.3);
+      transition: opacity .22s, transform .22s;
+    }
+    table tr:hover td:first-child::before { opacity: 1; transform: scaleY(1); }
+    td a { color: #9fd8ff; text-decoration: none; border-bottom: 1px dashed rgba(159,216,255,.35); }
+    td a:hover { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+    /* 涨跌（红涨绿跌，A股习惯） */
+    .up { color: var(--up); font-weight: 700; text-shadow: 0 0 14px rgba(255,77,94,.5); }
+    .down { color: var(--down); font-weight: 700; text-shadow: 0 0 14px rgba(0,229,155,.45); }
+    .flat { color: var(--txt-dim); }
+
+    /* ============ 输入框 ============ */
+    input[type=text], input[type=number], input[type=date] {
+      padding: 7px 11px; color: var(--txt); font-size: 13.5px; font-family: inherit;
+      background: rgba(5,10,20,.75);
+      border: 1px solid rgba(88,128,200,.3); border-radius: 7px;
+      transition: border-color .22s, box-shadow .22s;
+    }
+    input:focus {
+      outline: none; border-color: var(--border-lit);
+      box-shadow: 0 0 0 3px rgba(34,211,238,.14);
+    }
+    input::placeholder { color: #55688a; }
+
+    /* ============ 标签 ============ */
+    .tag {
+      display: inline-block; margin-right: 6px; padding: 2px 9px;
+      border-radius: 5px; font-size: 11.5px; font-weight: 700; letter-spacing: .3px;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .news-item:hover .tag { transform: translateY(-1px); }
+    .tag-good {
+      background: rgba(255,77,94,.16); color: #ff8d99; border: 1px solid rgba(255,77,94,.35);
+    }
+    .news-item:hover .tag-good { box-shadow: 0 0 14px -3px rgba(255,77,94,.7); }
+    .tag-bad {
+      background: rgba(0,229,155,.14); color: #5df0bd; border: 1px solid rgba(0,229,155,.32);
+    }
+    .news-item:hover .tag-bad { box-shadow: 0 0 14px -3px rgba(0,229,155,.65); }
+    .tag-neutral { background: rgba(148,163,184,.14); color: #a9bbd4; border: 1px solid rgba(148,163,184,.3); }
+    .tag-cat {
+      background: rgba(168,85,247,.14); color: #d5aeff;
+      border: 1px solid rgba(168,85,247,.32); font-weight: 500;
+    }
+
+    /* ============ 新闻条目 ============ */
+    .news-item {
+      padding: 11px 0 11px 13px; margin-bottom: 2px;
+      border-bottom: 1px solid rgba(88,128,200,.09);
+      border-left: 2px solid transparent;
+      transition: border-color .25s, background .25s, padding-left .25s;
+      animation: fadeIn .45s ease both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .news-item:last-child { border-bottom: 0; }
+    .news-item:hover {
+      border-left-color: var(--cyan);
+      background: linear-gradient(90deg, rgba(34,211,238,.07), transparent 70%);
+      padding-left: 17px;
+    }
+    .news-title { font-size: 14px; }
+    .news-title a { color: #e4eeff; text-decoration: none; }
+    .news-title a:hover { color: var(--cyan); text-decoration: underline; }
+    .news-reason { margin-top: 4px; font-size: 13px; color: #9fb2d0; }
+    .news-meta { margin-top: 3px; font-size: 11.5px; color: #667b9c; }
+    .no-news { padding: 10px 0; color: #667b9c; font-size: 13px; font-style: italic; }
+
+    /* ============ 技术面行 ============ */
+    .tech-line {
+      position: relative;
+      margin-bottom: 11px; padding: 10px 14px; font-size: 13px;
+      background: linear-gradient(90deg, rgba(34,211,238,.09), rgba(34,211,238,.01));
+      border-left: 2px solid var(--cyan); border-radius: 0 7px 7px 0;
+    }
+
+    /* ============ 风险提示 ============ */
+    .risk {
+      margin-top: 22px; padding: 13px 17px; font-size: 12.5px; line-height: 1.75;
+      color: #ffd9a8; background: rgba(251,146,60,.07);
+      border: 1px solid rgba(251,146,60,.26); border-left: 3px solid #fb923c;
+      border-radius: 9px;
+    }
+    .risk b { color: #ffb866; }
+
+    /* ============ 日期胶囊 ============ */
+    .date-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .date-list a {
+      padding: 6px 13px; font-size: 12.5px; text-decoration: none;
+      color: #a8bcd8; background: rgba(59,130,246,.09);
+      border: 1px solid rgba(88,128,200,.22); border-radius: 20px;
+      transition: all .22s;
+    }
+    .date-list a:hover {
+      color: #eaf7ff; border-color: var(--border-lit);
+      background: rgba(34,211,238,.16);
+      box-shadow: 0 0 16px -4px rgba(34,211,238,.7);
+      transform: translateY(-2px);
+    }
+
+    .empty { padding: 56px 20px; text-align: center; color: var(--txt-dim); }
+    .empty h1 { color: var(--txt); }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #070b14; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(88,128,200,.3); border-radius: 5px; border: 2px solid #070b14;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,.5); }
+
+    /* ============ 账户切换 ============ */
+    .acct-switch { position: relative; }
+    .acct-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 13px; border-radius: 8px; cursor: pointer;
+      font-size: 13px; font-family: inherit; color: #d5e6fa;
+      background: linear-gradient(135deg, rgba(168,85,247,.16), rgba(59,130,246,.18));
+      border: 1px solid rgba(168,85,247,.34);
+      transition: border-color .22s, box-shadow .22s;
+    }
+    .acct-btn:hover {
+      border-color: rgba(196,132,252,.6);
+      box-shadow: 0 0 16px -5px rgba(168,85,247,.8);
+    }
+    .acct-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--purple);
+      box-shadow: 0 0 9px 2px rgba(168,85,247,.8);
+    }
+    .acct-caret { font-size: 10px; opacity: .75; }
+    .acct-menu {
+      position: absolute; top: calc(100% + 8px); right: 0; z-index: 120;
+      min-width: 208px; padding: 6px;
+      background: rgba(11,17,32,.97); backdrop-filter: blur(14px);
+      border: 1px solid rgba(88,128,200,.3); border-radius: 10px;
+      box-shadow: 0 18px 46px -18px rgba(0,0,0,.95);
+      opacity: 0; visibility: hidden; transform: translateY(-6px);
+      transition: opacity .2s, transform .2s, visibility .2s;
+    }
+    .acct-menu.open { opacity: 1; visibility: visible; transform: none; }
+    .acct-menu a {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 8px 11px; border-radius: 7px;
+      font-size: 13px; color: #b9cde8; text-decoration: none;
+    }
+    .acct-menu a:hover { background: rgba(96,165,250,.14); color: #eaf3ff; }
+    .acct-menu a.on {
+      color: #eaf3ff; background: rgba(168,85,247,.16);
+      box-shadow: inset 2px 0 0 var(--purple);
+    }
+    .acct-broker { font-size: 11px; color: #7c8cab; }
+    .acct-manage {
+      margin-top: 4px; padding-top: 9px !important;
+      border-top: 1px solid rgba(88,128,200,.2);
+      color: #7cc4f0 !important; font-size: 12.5px !important;
+    }
+
+    /* ============ Toast 提示 ============ */
+    .toast {
+      position: fixed; right: 24px; bottom: 26px; z-index: 200;
+      max-width: 330px; padding: 12px 17px; border-radius: 10px;
+      font-size: 13px; color: #dbe6f5;
+      background: rgba(13, 20, 36, .95); backdrop-filter: blur(10px);
+      border: 1px solid rgba(88,128,200,.3); border-left: 3px solid var(--cyan);
+      box-shadow: 0 16px 44px -18px rgba(0,0,0,.95);
+      animation: toastIn .34s cubic-bezier(.2,.8,.3,1) both;
+    }
+    .toast.hide { animation: toastOut .4s ease both; }
+    .toast-ok { border-left-color: var(--down); }
+    .toast-warn { border-left-color: #fb923c; color: #ffd9a8; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(40px) scale(.96); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateX(40px) scale(.96); }
+    }
+
+    @media (max-width: 760px) {
+      .nav { gap: 12px; padding: 0 14px; overflow-x: auto; }
+      .brand { font-size: 15px; }
+      .container { padding: 0 14px; }
+    }
+
+    /* 系统开启「减少动态效果」时，默认也保留动效（本系统动效为产品需求）。
+       如需跟随系统关闭，在 <html> 上加 data-motion="reduced" 即可。
+       用户手动点击顶栏开关时写入 localStorage，优先级最高。 */
+    html[data-motion="reduced"] *,
+    html[data-motion="reduced"] *::before,
+    html[data-motion="reduced"] *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+    html[data-motion="reduced"] .card:hover { transform: none; }
+
+    /* 动效开关按钮 */
+    .motion-toggle {
+      padding: 6px 12px; border-radius: 8px; cursor: pointer;
+      font-size: 12.5px; font-family: inherit; color: #93a8c8;
+      background: rgba(88,128,200,.1);
+      border: 1px solid rgba(88,128,200,.24);
+      transition: color .22s, border-color .22s, background .22s;
+    }
+    .motion-toggle:hover {
+      color: #eaf3ff; border-color: var(--border-lit);
+      background: rgba(34,211,238,.14);
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <span class="brand">
+      <img src="/static/logo.svg?v=2" alt="" class="brand-logo">
+      {{ app_name }}
+    </span>
+    <div class="nav-links">
+      <a href="/" class="{{ 'active' if nav=='today' }}">今日报告</a>
+      <a href="/history" class="{{ 'active' if nav=='history' }}">历史报告</a>
+      <a href="/holdings" class="{{ 'active' if nav=='holdings' }}">持仓管理</a>
+      <a href="/accounts" class="{{ 'active' if nav=='accounts' }}">账户</a>
+      <a href="/settings" class="{{ 'active' if nav=='settings' }}">设置</a>
+    </div>
+    <span class="spacer"></span>
+
+    {% if accounts and accounts|length %}
+    <div class="acct-switch">
+      <button class="acct-btn" type="button" onclick="toggleAcct(event)">
+        <span class="acct-dot"></span>
+        {{ current_account.name if current_account else '未选择账户' }}
+        <span class="acct-caret">▾</span>
+      </button>
+      <div class="acct-menu" id="acctMenu">
+        {% for a in accounts %}
+        <a href="/switch-account/{{ a.id }}"
+           class="{{ 'on' if a.id == current_account_id }}">
+          {{ a.name }}{% if a.broker %}<span class="acct-broker">{{ a.broker }}</span>{% endif %}
+        </a>
+        {% endfor %}
+        <a href="/accounts" class="acct-manage">管理账户…</a>
+      </div>
+    </div>
+    {% endif %}
+    <button class="motion-toggle" type="button" onclick="toggleMotion()" id="motionBtn">✨ 动效</button>
+    <form method="post" action="/run" onsubmit="return onRunSubmit(this);">
+      <button class="btn btn-run" type="submit">⚡ 立即复盘</button>
+    </form>
+  </div>
+
+  <div class="container">
+    {% block content %}{% endblock %}
+    <div class="risk"><b>风险提示：</b>{{ risk_notice }}</div>
+  </div>
+
+  <script>
+    // ===== 账户切换下拉 =====
+    function toggleAcct(e) {
+      e.stopPropagation();
+      var m = document.getElementById('acctMenu');
+      if (m) m.classList.toggle('open');
+    }
+    // 点击页面其他位置时收起
+    document.addEventListener('click', function () {
+      var m = document.getElementById('acctMenu');
+      if (m) m.classList.remove('open');
+    });
+
+    // ===== 动效开关（默认开启，不跟随系统设置，偏好存 localStorage）=====
+    function toggleMotion() {
+      var html = document.documentElement;
+      var off = html.getAttribute('data-motion') === 'reduced';
+      if (off) {
+        html.removeAttribute('data-motion');
+        try { localStorage.setItem('motion', 'full'); } catch (e) {}
+        toast('动态效果已开启', 'ok');
+      } else {
+        html.setAttribute('data-motion', 'reduced');
+        try { localStorage.setItem('motion', 'reduced'); } catch (e) {}
+        toast('动态效果已关闭', 'info');
+      }
+      syncMotionBtn();
+    }
+
+    function syncMotionBtn() {
+      var btn = document.getElementById('motionBtn');
+      if (!btn) return;
+      var off = document.documentElement.getAttribute('data-motion') === 'reduced';
+      btn.innerText = off ? '○ 动效' : '✨ 动效';
+      btn.title = off ? '动态效果已关闭，点击开启' : '动态效果已开启，点击关闭';
+    }
+    syncMotionBtn();
+
+    // 「立即复盘」为后台任务：AJAX 触发 + 轮询状态，完成后自动刷新页面
+    function onRunSubmit(form) {
+      var btn = form.querySelector('button');
+      setRunning(btn, true);
+      fetch('/run', { method: 'POST' })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.body.started) {
+            toast(res.body.reason || '任务启动失败', 'warn');
+            setRunning(btn, false);
+            return;
+          }
+          toast('已开始采集与AI分析，完成后自动刷新', 'info');
+          pollStatus(btn);
+        })
+        .catch(function () {
+          toast('请求失败，请检查服务是否正常', 'warn');
+          setRunning(btn, false);
+        });
+      return false;   // 阻止表单原生提交
+    }
+
+    function setRunning(btn, on) {
+      btn.disabled = on;
+      btn.classList.toggle('running', on);
+      btn.innerText = on ? '采集分析中…' : '⚡ 立即复盘';
+    }
+
+    function pollStatus(btn) {
+      var timer = setInterval(function () {
+        fetch('/api/run-status').then(function (r) { return r.json(); }).then(function (s) {
+          if (s.running) return;
+          clearInterval(timer);
+          setRunning(btn, false);
+          if (s.error) {
+            toast('复盘失败：' + s.error, 'warn');
+          } else {
+            toast('复盘完成，正在刷新…', 'ok');
+            setTimeout(function () { location.reload(); }, 900);
+          }
+        }).catch(function () { clearInterval(timer); setRunning(btn, false); });
+      }, 2000);
+    }
+
+    function toast(msg, kind) {
+      var t = document.createElement('div');
+      t.className = 'toast toast-' + (kind || 'info');
+      t.innerText = msg;
+      document.body.appendChild(t);
+      setTimeout(function () { t.classList.add('hide'); }, 3600);
+      setTimeout(function () { t.remove(); }, 4200);
+    }
+
+    // 看板数字滚动增长：为元素添加 data-count 即生效
+    (function countUp() {
+      if (document.documentElement.getAttribute('data-motion') === 'reduced') return;
+      var nodes = document.querySelectorAll('[data-count]');
+      Array.prototype.forEach.call(nodes, function (el) {
+        var target = parseFloat(el.getAttribute('data-count'));
+        if (isNaN(target)) return;
+        var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+        var suffix = el.getAttribute('data-suffix') || '';
+        var sign = el.getAttribute('data-sign') === '1';
+
+        var dur = 1100, start = null;
+        function fmt(v) {
+          var s = v.toFixed(decimals);
+          if (sign && v > 0) s = '+' + s;
+          return s + suffix;
+        }
+        function step(ts) {
+          if (start === null) start = ts;
+          var p = Math.min((ts - start) / dur, 1);
+          var eased = 1 - Math.pow(1 - p, 3);   // easeOutCubic
+          el.textContent = fmt(target * eased);
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = fmt(target);
+        }
+        el.textContent = fmt(0);
+        requestAnimationFrame(step);
+      });
+    })();
+
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

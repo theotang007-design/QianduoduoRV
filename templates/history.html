@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}历史报告 · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>历史复盘报告</h1>
+  <div class="muted">共 {{ dates|length }} 期报告，所有记录永久保留</div>
+</div>
+
+<div class="card">
+  <h2>按日期跳转</h2>
+  <form onsubmit="location.href='/report/'+this.d.value;return false;">
+    <input type="date" name="d" required>
+    <button class="btn" type="submit">查看</button>
+  </form>
+</div>
+
+{% if dates %}
+<div class="card">
+  <h2>全部报告</h2>
+  <div class="date-list" style="margin-bottom:18px;">
+    {% for d in dates[:30] %}<a href="/report/{{ d.date }}">{{ d.date }}</a>{% endfor %}
+  </div>
+  <table>
+    <tr><th style="width:150px;">日期</th><th>生成时间</th><th style="width:110px;">操作</th></tr>
+    {% for d in dates %}
+    <tr>
+      <td class="mono">{{ d.date }}</td>
+      <td class="muted mono">{{ d.generated_at }}</td>
+      <td><a href="/report/{{ d.date }}">查看报告</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty">
+    <h1>暂无历史报告</h1>
+    <p class="muted">点击右上角「立即复盘」生成第一份报告</p>
+  </div>
+</div>
+{% endif %}
+
+<style>
+  .mono { font-family: "Consolas", "SF Mono", monospace; }
+</style>
+{% endblock %}

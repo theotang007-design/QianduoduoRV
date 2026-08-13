@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}暂无报告 · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="empty">
+    <h1>暂无复盘报告{% if date %}（{{ date }}）{% endif %}</h1>
+    <p class="muted" style="margin-top:10px;">
+      请先在「持仓管理」添加持仓，然后点击右上角「⚡ 立即复盘」，<br>
+      或在命令行运行 <code>python run_review.py --force</code>
+    </p>
+    <p style="margin-top:24px;">
+      <a class="btn" href="/holdings"
+         style="text-decoration:none;padding:9px 22px;display:inline-block;">前往持仓管理</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
